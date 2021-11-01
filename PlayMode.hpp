@@ -23,26 +23,24 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} left, right, down, up, space;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
-	//hexapod leg to wobble:
-	Scene::Transform *hip = nullptr;
-	Scene::Transform *upper_leg = nullptr;
-	Scene::Transform *lower_leg = nullptr;
-	glm::quat hip_base_rotation;
-	glm::quat upper_leg_base_rotation;
-	glm::quat lower_leg_base_rotation;
-	float wobble = 0.0f;
+    float gravity = -15.0f;
 
-	glm::vec3 get_leg_tip_position();
+    struct Player {
+		//transform is at player's feet and will be yawed by mouse left/right motion:
+		Scene::Transform *transform = nullptr;
+        Scene::Transform *facing = nullptr;
 
-	//music coming from the tip of the leg (as a demonstration):
-	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
-	
-	//camera:
-	Scene::Camera *camera = nullptr;
+		//camera is at player's head
+		Scene::Camera *camera = nullptr;
 
+        //jumping
+        float init_up_v = 8.0f;
+        float air_time = 0.0f;
+        bool jumping = false;
+	} player;
 };

@@ -8,6 +8,8 @@
 #include <vector>
 #include <deque>
 
+enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
+
 struct PlayMode : Mode {
 	PlayMode();
 	virtual ~PlayMode();
@@ -16,6 +18,8 @@ struct PlayMode : Mode {
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
+
+    void AttachToGround(Scene::Transform *transform);
 
 	//----- game state -----
 
@@ -42,5 +46,9 @@ struct PlayMode : Mode {
         float init_up_v = 8.0f;
         float air_time = 0.0f;
         bool jumping = false;
+
+        Scene::Transform *ground = nullptr;
+        SurfaceType surface = TOP;
+        float ground_level = 0.f;
 	} player;
 };

@@ -83,11 +83,13 @@ int main(int argc, char **argv) {
 	bool usage = false;
 	std::string scene_file;
 	std::string meshes_file;
+    std::string bbox_file;
 	if (argc == 2) {
 		scene_file = argv[1];
-	} else if (argc == 3) {
+	} else if (argc == 4) {
 		scene_file = argv[1];
 		meshes_file = argv[2];
+        bbox_file = argv[3];
 	} else {
 		usage = true;
 	}
@@ -95,7 +97,7 @@ int main(int argc, char **argv) {
 	GLuint buffer_vao = 0;
 	if (meshes_file != "") {
 		try {
-			buffer = new MeshBuffer(meshes_file);
+			buffer = new MeshBuffer(meshes_file, bbox_file);
 			buffer_vao = buffer->make_vao_for_program(show_scene_program->program);
 		} catch (std::exception &e) {
 			std::cerr << "ERROR loading mesh buffer '" << meshes_file << "': " << e.what() << std::endl;

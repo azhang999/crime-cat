@@ -29,14 +29,28 @@ struct Mesh {
 	glm::vec3 max = glm::vec3(-std::numeric_limits< float >::infinity());
 };
 
+struct BoundBox {
+    glm::vec3 P1;
+    glm::vec3 P2;
+    glm::vec3 P3;
+    glm::vec3 P4;
+    glm::vec3 P5;
+    glm::vec3 P6;
+    glm::vec3 P7;
+    glm::vec3 P8;
+};
+
 struct MeshBuffer {
 	//construct from a file:
 	// note: will throw if file fails to read.
-	MeshBuffer(std::string const &filename);
+	MeshBuffer(std::string const &pnct_name, std::string const &bb_name);
 
 	//look up a particular mesh by name:
 	// note: will throw if mesh not found.
 	const Mesh &lookup(std::string const &name) const;
+
+    //look up a bounding box for a particular mesh:
+    const BoundBox &lookup_bound_box(std::string const &name) const;
 	
 	//build a vertex array object that links this vbo to attributes to a program:
 	// note: will throw if program defines attributes not contained in this buffer
@@ -49,6 +63,8 @@ struct MeshBuffer {
 
 	//used by the lookup() function:
 	std::map< std::string, Mesh > meshes;
+
+    std::map< std::string, BoundBox > bound_boxes;
 
 	//These 'Attrib' structures describe the location of various attributes within the buffer (in exactly format wanted by glVertexAttribPointer). They are set when the file is loaded and are used by the "make_vao_for_program" call:
 	struct Attrib {

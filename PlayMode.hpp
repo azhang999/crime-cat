@@ -39,6 +39,10 @@ struct PlayMode : Mode {
 		Scene::Transform *transform = nullptr;
         Scene::Transform *facing = nullptr;
 
+        float radius = 0.5f;
+        glm::vec3 tip;
+        glm::vec3 base;
+
 		//camera is at player's head
 		Scene::Camera *camera = nullptr;
 

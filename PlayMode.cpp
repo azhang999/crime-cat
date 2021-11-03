@@ -286,8 +286,9 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
     float dist = glm::dot(center - p0, N); // signed distance between sphere and plane
     // if (!mesh.is_double_sided() && dist > 0) continue; // can pass through back side of triangle (optional)
-    if (dist < -radius || dist > radius) return false; // no intersection
-
+    if (dist < -radius || dist > radius) {
+        return false; // no intersection
+    } 
     glm::vec3 point0 = center - N * dist; // projected sphere center on triangle plane
     
     // Now determine whether point0 is inside all triangle edges: 
@@ -354,6 +355,29 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     return false;
 }
 
+bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius) {
+    glm::vec3 close0 = closest_point_on_line_segment(A, B, p0);
+    glm::vec3 close1 = closest_point_on_line_segment(A, B, p1);
+    glm::vec3 close2 = closest_point_on_line_segment(A, B, p2);
+
+    glm::vec3 center = close0;
+    float d = glm::distance(close0, p0);
+
+    float temp_d = glm::distance(close1, p1);
+    if (temp_d < d) {
+        center = close1;
+        d = temp_d;
+    }
+
+    temp_d = glm::distance(close2, p2);
+    if (temp_d < d) {
+        center = close2;
+        d = temp_d;
+    }
+
+    return sphere_triangle_collision(center, radius, p0, p1, p2);
+}
+
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
 // Note for triangle normal, p0, p1, p2 matters
 bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
@@ -366,8 +390,16 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     // Then for each triangle, ray-plane intersection:
     //  N is the triangle plane normal (it was computed in sphere - triangle intersection case)
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
-    float t = glm::dot(N, (p0 - base) / std::abs(glm::dot(N, CapsuleNormal)));
+
+    if (std::abs(glm::dot(N, CapsuleNormal)) == 0.f) {
+        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius);
+    }
+
+
+    float t = glm::dot(N, (p0 - base) / std::abs(glm::dot(N, CapsuleNormal))); // this is producing nans since glm::dot(N, CapsuleNormal) is returning 0
+    
     glm::vec3 line_plane_intersection = base + CapsuleNormal * t;
+
     
     glm::vec3 reference_point = glm::vec3(0.f);// {find closest point on triangle to line_plane_intersection};
 
@@ -376,7 +408,7 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     glm::vec3 c1 = glm::cross(line_plane_intersection - p1, p2 - p1);
     glm::vec3 c2 = glm::cross(line_plane_intersection - p2, p0 - p2);
     bool inside = (glm::dot(c0, N) <= 0) && (glm::dot(c1, N) <= 0) && (glm::dot(c2, N) <= 0);
-    
+
     if (inside) {
         reference_point = line_plane_intersection;
     } else {
@@ -516,8 +548,8 @@ void PlayMode::update(float elapsed) {
             //                     << " " << drawable.transform->left_stand << " " << drawable.transform->right_stand << std::endl;
             // std::cout << drawable.transform->name << " "<< drawable.transform->bbox[3].x << " " << drawable.transform->bbox[3].y 
             //                     << " " << drawable.transform->bbox[3].z << std::endl;
-            if (drawable.transform->name == "Rug") continue;
             if (drawable.transform->name == "Floor") continue;
+            if (drawable.transform->name == "Rug") continue;
             if (drawable.transform->name == "Player") continue;
             if (drawable.transform->name == "Facing") continue;
 
@@ -588,19 +620,19 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
         for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name != "Couch.001") continue;
+            // if (drawable.transform->name != "Plant") continue;
 
-            // top
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // top
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // bottom
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // bottom
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
             // left
             draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
@@ -608,23 +640,23 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
             draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
             draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // right
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // right
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // front
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // front
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // back
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // back
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
 
         }

@@ -12,12 +12,14 @@ endif
 
 EXPORT_MESHES=export-meshes.py
 EXPORT_SCENE=export-scene.py
+EXPORT_BOUNDBOX=export-boundbox.py
 
 DIST=../dist
 
 all : \
 	$(DIST)/living_room.pnct \
 	$(DIST)/living_room.scene \
+	$(DIST)/living_room.boundbox \
 
 
 $(DIST)/living_room.scene : living_room.blend $(EXPORT_SCENE)
@@ -25,3 +27,6 @@ $(DIST)/living_room.scene : living_room.blend $(EXPORT_SCENE)
 
 $(DIST)/living_room.pnct : living_room.blend $(EXPORT_MESHES)
 	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Main '$@'
+
+$(DIST)/living_room.boundbox : living_room.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Main '$@'

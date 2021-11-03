@@ -11,20 +11,65 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <iostream>
 
 GLuint living_room_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > living_room_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"));
+    printf("CALLING LIVING_ROOM_MESHES\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"), data_path("living_room.boundbox"));
 	living_room_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
+// angle in radians between two 3d vectors
+float angleBetween(glm::vec3 x, glm::vec3 y) {
+    return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
+}
+
 Load< Scene > living_room_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("living_room.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = living_room_meshes->lookup(mesh_name);
+        // BoundBox const &bbox = living_room_meshes->lookup_bound_box(mesh_name);
+        // // std::cout << mesh_name << " "<< transform->top_stand << " " << transform->bot_stand 
+        // //                       << " " << transform->front_stand << " " << transform->back_stand
+        // //                       << " " << transform->left_stand << " " << transform->right_stand << std::endl;
 
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
+
+        // drawable.transform->bbox[0] = bbox.P1;
+        // drawable.transform->bbox[1] = bbox.P2;
+        // drawable.transform->bbox[2] = bbox.P3;
+        // drawable.transform->bbox[3] = bbox.P4;
+        // drawable.transform->bbox[4] = bbox.P5;
+        // drawable.transform->bbox[5] = bbox.P6;
+        // drawable.transform->bbox[6] = bbox.P7;
+        // drawable.transform->bbox[7] = bbox.P8;
+
+        // glm::vec3 up = glm::vec3(0.f, 0.f, 1.f);
+        // float deg_45_in_rad = 0.7854f;
+
+        // // std::cout << bbox.P1[0] << " " << bbox.P1[1] << " " << bbox.P1[2] << std::endl;
+        // drawable.transform->top_n = glm::cross(bbox.P3 - bbox.P7, bbox.P6 - bbox.P7);
+        // drawable.transform->bot_n = glm::cross(bbox.P5 - bbox.P8, bbox.P4 - bbox.P8);
+        // drawable.transform->top_stand = (angleBetween(up, drawable.transform->top_n) < deg_45_in_rad);
+        // drawable.transform->bot_stand = (angleBetween(up, drawable.transform->bot_n) < deg_45_in_rad);
+
+        // drawable.transform->front_n = glm::cross(bbox.P3 - bbox.P4, bbox.P8 - bbox.P4);
+        // drawable.transform->back_n = glm::cross(bbox.P2 - bbox.P6, bbox.P5 - bbox.P6);
+        // drawable.transform->front_stand = (angleBetween(up, drawable.transform->front_n) < deg_45_in_rad);
+        // drawable.transform->back_stand = (angleBetween(up, drawable.transform->back_n) < deg_45_in_rad);
+
+        // drawable.transform->left_n = glm::cross(bbox.P6 - bbox.P7, bbox.P8 - bbox.P7);
+        // drawable.transform->right_n = glm::cross(bbox.P2 - bbox.P1, bbox.P4 - bbox.P1);
+        // drawable.transform->left_stand = (angleBetween(up, drawable.transform->left_n) < deg_45_in_rad);
+        // drawable.transform->right_stand = (angleBetween(up, drawable.transform->right_n) < deg_45_in_rad);
+
+
+        // std::cout << mesh_name << " "<< drawable.transform->top_stand << " " << drawable.transform->bot_stand 
+        //                       << " " << drawable.transform->front_stand << " " << drawable.transform->back_stand
+        //                       << " " << drawable.transform->left_stand << " " << drawable.transform->right_stand << std::endl;
+
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 
@@ -41,13 +86,106 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
+void PlayMode::AttachToGround(Scene::Transform *transform) {
+    printf("Calling AttachToGround\n");
+    printf("1\n");
+    player.ground = transform;
+    if (transform->top_stand) {
+        printf("2\n");
+        player.surface = TOP;
+        printf("3\n");
+        player.transform->position.z = transform->bbox[2].z+ 1.0f;
+        printf("4\n");
+    } else if (transform->bot_stand) {
+        player.surface = BOT;
+        player.transform->position.z = transform->bbox[3].z+ 1.0f;
+    } else if (transform->front_stand) {
+        player.surface = FRONT;
+        player.transform->position.z = transform->bbox[3].z+ 1.0f;
+    } else if (transform->back_stand) {
+        player.surface = BACK;
+        player.transform->position.z = transform->bbox[0].z+ 1.0f;
+    } else if (transform->left_stand) {
+        player.surface = LEFT;
+        player.transform->position.z = transform->bbox[7].z+ 1.0f;
+    } else if (transform->right_stand) {
+        player.surface = RIGHT;
+        player.transform->position.z = transform->bbox[2].z+ 1.0f;
+    } else {
+        std::cout << transform->name << " does not have a standable surface " << std::endl;
+    }
+
+    player.ground_level = player.transform->position.z;
+}
+
 PlayMode::PlayMode() : scene(*living_room_scene) {
 
-     for (auto &drawable : scene.drawables) {
+    // get player transform - TODO don't loop through again
+    for (auto &drawable : scene.drawables) {
         if (drawable.transform->name == "Player") {
             player.transform = drawable.transform;
-        } else if (drawable.transform->name == "Facing") {
+            player.tip = player.transform->position;
+            player.tip.z += 1.0f;
+            player.base = player.transform->position;
+            player.base.z -= 1.0f;
+        }
+    }
+
+    for (auto &drawable : scene.drawables) {
+        BoundBox const &bbox = living_room_meshes->lookup_bound_box(drawable.transform->name);
+        // std::cout << mesh_name << " "<< transform->top_stand << " " << transform->bot_stand 
+        //                       << " " << transform->front_stand << " " << transform->back_stand
+        //                       << " " << transform->left_stand << " " << transform->right_stand << std::endl;
+
+        drawable.transform->bbox[0] = bbox.P1;
+        drawable.transform->bbox[1] = bbox.P2;
+        drawable.transform->bbox[2] = bbox.P3;
+        drawable.transform->bbox[3] = bbox.P4;
+        drawable.transform->bbox[4] = bbox.P5;
+        drawable.transform->bbox[5] = bbox.P6;
+        drawable.transform->bbox[6] = bbox.P7;
+        drawable.transform->bbox[7] = bbox.P8;
+
+        glm::vec3 up = glm::vec3(0.f, 0.f, 1.f);
+        float deg_45_in_rad = 0.7854f;
+
+        // std::cout << drawable.transform->name << std::endl;
+        // std::cout << bbox.P1[0] << " " << bbox.P1[1] << " " << bbox.P1[2] << std::endl;
+        // std::cout << bbox.P2[0] << " " << bbox.P2[1] << " " << bbox.P2[2] << std::endl;
+        // std::cout << bbox.P3[0] << " " << bbox.P3[1] << " " << bbox.P3[2] << std::endl;
+        // std::cout << bbox.P4[0] << " " << bbox.P4[1] << " " << bbox.P4[2] << std::endl;
+        // std::cout << bbox.P5[0] << " " << bbox.P5[1] << " " << bbox.P5[2] << std::endl;
+        // std::cout << bbox.P6[0] << " " << bbox.P6[1] << " " << bbox.P6[2] << std::endl;
+        // std::cout << bbox.P7[0] << " " << bbox.P7[1] << " " << bbox.P7[2] << std::endl;
+        // std::cout << bbox.P8[0] << " " << bbox.P8[1] << " " << bbox.P8[2] << std::endl;
+        drawable.transform->top_n = glm::cross(bbox.P3 - bbox.P7, bbox.P6 - bbox.P7);
+        drawable.transform->bot_n = glm::cross(bbox.P5 - bbox.P8, bbox.P4 - bbox.P8);
+        drawable.transform->top_stand = (angleBetween(up, drawable.transform->top_n) < deg_45_in_rad);
+        drawable.transform->bot_stand = (angleBetween(up, drawable.transform->bot_n) < deg_45_in_rad);
+
+        drawable.transform->front_n = glm::cross(bbox.P3 - bbox.P4, bbox.P8 - bbox.P4);
+        drawable.transform->back_n = glm::cross(bbox.P2 - bbox.P6, bbox.P5 - bbox.P6);
+        drawable.transform->front_stand = (angleBetween(up, drawable.transform->front_n) < deg_45_in_rad);
+        drawable.transform->back_stand = (angleBetween(up, drawable.transform->back_n) < deg_45_in_rad);
+
+        drawable.transform->left_n = glm::cross(bbox.P6 - bbox.P7, bbox.P8 - bbox.P7);
+        drawable.transform->right_n = glm::cross(bbox.P2 - bbox.P1, bbox.P4 - bbox.P1);
+        drawable.transform->left_stand = (angleBetween(up, drawable.transform->left_n) < deg_45_in_rad);
+        drawable.transform->right_stand = (angleBetween(up, drawable.transform->right_n) < deg_45_in_rad);
+
+
+
+        auto transform = drawable.transform;
+        std::cout << transform->name << " "<< transform->top_stand << " " << transform->bot_stand 
+                            << " " << transform->front_stand << " " << transform->back_stand
+                            << " " << transform->left_stand << " " << transform->right_stand << std::endl;
+        std::cout << transform->name << " "<< transform->bbox[3].x << " " << transform->bbox[3].y 
+                            << " " << transform->bbox[3].z << std::endl;
+        if (drawable.transform->name == "Facing") {
             player.facing = drawable.transform;
+        } else if (drawable.transform->name == "Floor") {
+            player.ground = drawable.transform;
+            AttachToGround(drawable.transform);
         }
 	}
 
@@ -133,12 +271,232 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	return false;
 }
 
+// COLLISION CHECKING: TODO: refactor into another file
+// SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
+glm::vec3 closest_point_on_line_segment(glm::vec3 A, glm::vec3 B, glm::vec3 Point) {
+    glm::vec3 AB = B - A;
+    float t = glm::dot(Point - A, AB) / glm::dot(AB, AB);
+    return A + std::min(std::max(t, 0.f), 1.f) * AB;
+}
+
+// SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
+bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+    // float3 p0, p1, p2; // triangle corners
+    // float3 center; // sphere center
+    glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
+    float dist = glm::dot(center - p0, N); // signed distance between sphere and plane
+    // if (!mesh.is_double_sided() && dist > 0) continue; // can pass through back side of triangle (optional)
+    if (dist < -radius || dist > radius) {
+        return false; // no intersection
+    } 
+    glm::vec3 point0 = center - N * dist; // projected sphere center on triangle plane
+    
+    // Now determine whether point0 is inside all triangle edges: 
+    glm::vec3 c0 = glm::cross(point0 - p0, p1 - p0);
+    glm::vec3 c1 = glm::cross(point0 - p1, p2 - p1);
+    glm::vec3 c2 = glm::cross(point0 - p2, p0 - p2);
+    bool inside = (glm::dot(c0, N) <= 0) && (glm::dot(c1, N) <= 0) && (glm::dot(c2, N) <= 0);
+    
+    float radiussq = radius * radius; // sphere radius squared
+    
+    // Edge 1:
+    glm::vec3 point1 = closest_point_on_line_segment(p0, p1, center);
+    glm::vec3 v1 = center - point1;
+    float distsq1 = glm::dot(v1, v1);
+    bool intersects = distsq1 < radiussq;
+    
+    // Edge 2:
+    glm::vec3 point2 = closest_point_on_line_segment(p1, p2, center);
+    glm::vec3 v2 = center - point2;
+    float distsq2 = glm::dot(v2, v2);
+    intersects |= distsq2 < radiussq;
+    
+    // Edge 3:
+    glm::vec3 point3 = closest_point_on_line_segment(p2, p0, center);
+    glm::vec3 v3 = center - point3;
+    float distsq3 = glm::dot(v3, v3);
+    intersects |= distsq3 < radiussq;
+
+    if (inside || intersects) {
+        // float3 best_point = point0;
+        // float3 intersection_vec;
+        
+        // if (inside) {
+        //     intersection_vec = center - point0;
+        // } else {
+        //     float3 d = center - point1;
+        //     float best_distsq = dot(d, d);
+        //     best_point = point1;
+        //     intersection_vec = d;
+        
+        //     d = center - point2;
+        //     float distsq = dot(d, d);
+        //     if (distsq < best_distsq) {
+        //         distsq = best_distsq;
+        //         best_point = point2;
+        //         intersection_vec = d;
+        //     }
+        
+        //     d = center - point3;
+        //     float distsq = dot(d, d);
+        //     if (distsq < best_distsq) {
+        //         distsq = best_distsq;
+        //         best_point = point3; 
+        //         intersection_vec = d;
+        //     }
+        // }
+        
+        // float3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
+        // float3 penetration_normal = penetration_vec / len;  // normalize
+        // float penetration_depth = radius - len; // radius = sphere radius
+        return true; // intersection success
+    }
+
+    return false;
+}
+
+bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius) {
+    glm::vec3 close0 = closest_point_on_line_segment(A, B, p0);
+    glm::vec3 close1 = closest_point_on_line_segment(A, B, p1);
+    glm::vec3 close2 = closest_point_on_line_segment(A, B, p2);
+
+    glm::vec3 center = close0;
+    float d = glm::distance(close0, p0);
+
+    float temp_d = glm::distance(close1, p1);
+    if (temp_d < d) {
+        center = close1;
+        d = temp_d;
+    }
+
+    temp_d = glm::distance(close2, p2);
+    if (temp_d < d) {
+        center = close2;
+        d = temp_d;
+    }
+
+    return sphere_triangle_collision(center, radius, p0, p1, p2);
+}
+
+// SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
+// Note for triangle normal, p0, p1, p2 matters
+bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+    // Compute capsule line endpoints A, B like before in capsule-capsule case:
+    glm::vec3 CapsuleNormal = glm::normalize(tip - base); 
+    glm::vec3 LineEndOffset = CapsuleNormal * radius; 
+    glm::vec3 A = base + LineEndOffset; 
+    glm::vec3 B = tip - LineEndOffset;
+    
+    // Then for each triangle, ray-plane intersection:
+    //  N is the triangle plane normal (it was computed in sphere - triangle intersection case)
+    glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
+
+    if (std::abs(glm::dot(N, CapsuleNormal)) == 0.f) {
+        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius);
+    }
+
+
+    float t = glm::dot(N, (p0 - base) / std::abs(glm::dot(N, CapsuleNormal))); // this is producing nans since glm::dot(N, CapsuleNormal) is returning 0
+    
+    glm::vec3 line_plane_intersection = base + CapsuleNormal * t;
+
+    
+    glm::vec3 reference_point = glm::vec3(0.f);// {find closest point on triangle to line_plane_intersection};
+
+    // Determine whether line_plane_intersection is inside all triangle edges: 
+    glm::vec3 c0 = glm::cross(line_plane_intersection - p0, p1 - p0);
+    glm::vec3 c1 = glm::cross(line_plane_intersection - p1, p2 - p1);
+    glm::vec3 c2 = glm::cross(line_plane_intersection - p2, p0 - p2);
+    bool inside = (glm::dot(c0, N) <= 0) && (glm::dot(c1, N) <= 0) && (glm::dot(c2, N) <= 0);
+
+    if (inside) {
+        reference_point = line_plane_intersection;
+    } else {
+        // Edge 1:
+        glm::vec3 point1 = closest_point_on_line_segment(p0, p1, line_plane_intersection);
+        glm::vec3 v1 = line_plane_intersection - point1;
+        float distsq = glm::dot(v1, v1);
+        float best_dist = distsq;
+        reference_point = point1;
+        
+        // Edge 2:
+        glm::vec3 point2 = closest_point_on_line_segment(p1, p2, line_plane_intersection);
+        glm::vec3 v2 = line_plane_intersection - point2;
+        distsq = glm::dot(v2, v2);
+        if (distsq < best_dist) {
+            reference_point = point2;
+            best_dist = distsq;
+        }
+        
+        // Edge 3:
+        glm::vec3 point3 = closest_point_on_line_segment(p2, p0, line_plane_intersection);
+        glm::vec3 v3 = line_plane_intersection - point3;
+        distsq = glm::dot(v3, v3);
+        if (distsq < best_dist) {
+            reference_point = point3;
+            best_dist = distsq;
+        }
+    }
+    
+    // The center of the best sphere candidate:
+    glm::vec3 center = closest_point_on_line_segment(A, B, reference_point);
+
+    return sphere_triangle_collision(center, radius, p0, p1, p2);
+}
+
+bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius, 
+                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
+    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1)) {
+        return true;
+    }
+
+    return capsule_triangle_collision(tip, base, radius, p2, p1, p3);
+}
+
+bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, SurfaceType *surface) {
+    // top
+    if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2])) {
+        *surface = TOP;
+        return true;
+    }
+
+    // bottom
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0])) {
+        *surface = BOT;
+        return true;
+    }
+
+    // left
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7])) {
+        *surface = LEFT;
+        return true;
+    }
+
+    // right
+    if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0])) {
+        *surface = RIGHT;
+        return true;
+    }
+
+    // front
+    if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3])) {
+        *surface = FRONT;
+        return true;
+    }
+
+    // back
+    if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4])) {
+        *surface = BACK;
+        return true;
+    }
+
+    return false;
+}
+
 void PlayMode::update(float elapsed) {
 
 	//move player:
 	{
-        
-
 		//combine inputs into a move:
 		constexpr float ground_speed = 8.0f;
         constexpr float air_speed = 5.0f;
@@ -164,7 +522,7 @@ void PlayMode::update(float elapsed) {
 
         if (player.jumping) {
             player.air_time += elapsed;
-            float player_starting_height = 1.0f;
+            float player_starting_height = player.ground_level + 1.0f;
             float height = player_starting_height + player.init_up_v * player.air_time + 0.5f * gravity * player.air_time * player.air_time;
             if (height <= player_starting_height) {
                 player.transform->position.z = player_starting_height;
@@ -176,6 +534,57 @@ void PlayMode::update(float elapsed) {
         }
         
 	}
+
+    player.tip = player.transform->position;
+    player.tip.z += 1.0f;
+    player.base = player.transform->position;
+    player.base.z -= 1.0f;
+
+    // check for collisions:
+    {
+        for (auto &drawable : scene.drawables) {
+            // std::cout << drawable.transform->name << " "<< drawable.transform->top_stand << " " << drawable.transform->bot_stand 
+            //                     << " " << drawable.transform->front_stand << " " << drawable.transform->back_stand
+            //                     << " " << drawable.transform->left_stand << " " << drawable.transform->right_stand << std::endl;
+            // std::cout << drawable.transform->name << " "<< drawable.transform->bbox[3].x << " " << drawable.transform->bbox[3].y 
+            //                     << " " << drawable.transform->bbox[3].z << std::endl;
+            if (drawable.transform->name == "Floor") continue;
+            if (drawable.transform->name == "Rug") continue;
+            if (drawable.transform->name == "Player") continue;
+            if (drawable.transform->name == "Facing") continue;
+
+            SurfaceType surface;
+            if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+                std::cout << drawable.transform->name << std::endl;
+                switch (surface) {
+                    case TOP: {
+                        std::cout << "TOP" << std::endl;
+                        break;
+                    }
+                    case BOT: {
+                        std::cout << "BOT" << std::endl;
+                        break;
+                    }
+                    case FRONT: {
+                        std::cout << "FRONT" << std::endl;
+                        break;
+                    }
+                    case BACK: {
+                        std::cout << "BACK" << std::endl;
+                        break;
+                    }
+                    case LEFT: {
+                        std::cout << "LEFT" << std::endl;
+                        break;
+                    }
+                    case RIGHT: {
+                        std::cout << "RIGHT" << std::endl;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
 	//reset button press counters:
 	left.downs = 0;
@@ -206,16 +615,65 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*player.camera);
 
+    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+        glDisable(GL_DEPTH_TEST);
+        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+
+        for (auto &drawable : scene.drawables) {
+            // if (drawable.transform->name != "Plant") continue;
+
+            // // top
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+            // // bottom
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+            // left
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+            // // right
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+            // // front
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+            // // back
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+
+        }
+
+    }
+
 	{ //use DrawLines to overlay some text:
-		glDisable(GL_DEPTH_TEST);
-		float aspect = float(drawable_size.x) / float(drawable_size.y);
-		DrawLines lines(glm::mat4(
+        glDisable(GL_DEPTH_TEST);
+
+        float aspect = float(drawable_size.x) / float(drawable_size.y);
+
+        DrawLines lines(glm::mat4(
 			1.0f / aspect, 0.0f, 0.0f, 0.0f,
 			0.0f, 1.0f, 0.0f, 0.0f,
 			0.0f, 0.0f, 1.0f, 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
-
 		constexpr float H = 0.09f;
 		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),

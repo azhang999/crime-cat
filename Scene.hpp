@@ -23,6 +23,7 @@
 #include <unordered_map>
 
 struct Scene {
+
 	struct Transform {
 		//Transform names are useful for debugging and looking up locations in a loaded scene:
 		std::string name;
@@ -31,6 +32,17 @@ struct Scene {
 		glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
 		glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); //n.b. wxyz init order
 		glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        // bounding box of initial object
+        glm::vec3 bbox[8];
+
+        // normals of bounding boxes
+        glm::vec3 top_n; bool top_stand = false;
+        glm::vec3 bot_n; bool bot_stand = false;
+        glm::vec3 back_n; bool back_stand = false;
+        glm::vec3 front_n; bool front_stand = false;
+        glm::vec3 left_n; bool left_stand = false;
+        glm::vec3 right_n; bool right_stand = false;
 
 		//The transform above may be relative to some parent transform:
 		Transform *parent = nullptr;

@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
 	//------------ create game mode + make current --------------
 	bool usage = false;
 	MeshBuffer *buffer = nullptr;
-	if (argc == 2) {
+	if (argc == 3) {
 		try {
-			buffer = new MeshBuffer(argv[1]);
+			buffer = new MeshBuffer(argv[1], argv[2]);
 		} catch (std::exception &e) {
 			std::cerr << "ERROR: " << e.what() << std::endl;
 			usage = true;

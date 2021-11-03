@@ -9,7 +9,8 @@
 #include "data_path.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
-
+#include "glm/ext.hpp"
+#include "glm/gtx/string_cast.hpp"
 #include <random>
 #include <iostream>
 
@@ -318,6 +319,7 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     intersects |= distsq3 < radiussq;
 
     if (inside || intersects) {
+        // ************** calculating penetration normal and depth **************
         // float3 best_point = point0;
         // float3 intersection_vec;
         
@@ -346,7 +348,10 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
         //     }
         // }
         
-        // float3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
+        // glm::vec3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
+        // player.transform->position += len;
+
+
         // float3 penetration_normal = penetration_vec / len;  // normalize
         // float penetration_depth = radius - len; // radius = sphere radius
         return true; // intersection success
@@ -495,6 +500,9 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
 
 void PlayMode::update(float elapsed) {
 
+    // save current player position
+    glm::vec3 orig_position = player.transform->position;
+
 	//move player:
 	{
 		//combine inputs into a move:
@@ -556,6 +564,37 @@ void PlayMode::update(float elapsed) {
             SurfaceType surface;
             if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
                 std::cout << drawable.transform->name << std::endl;
+
+                // ---------- Non-walkable scene objects ----------
+                if (drawable.transform->name == "Wall.002" || drawable.transform->name == "Wall.001" || drawable.transform->name == "Wall.003" || drawable.transform->name == "Wall.004"
+                    || drawable.transform->name == "Lamp" || drawable.transform->name == "Lamp.001" || drawable.transform->name == "Lamp.002" || drawable.transform->name == "Plant"
+                    || drawable.transform->name == "Coaster" || drawable.transform->name == "Mug" || drawable.transform->name == "MugHandle"
+                    || drawable.transform->name == "Magazine.001" || drawable.transform->name == "Magazine.002" || drawable.transform->name == "Magazine.003" || drawable.transform->name == "Magazine.004"
+                    || drawable.transform->name == "Pillow" || drawable.transform->name == "Pillow.001") {
+                    // std::cout << "**** HANDLING WALL COLLISION - rolling back" << std::endl;
+                    // std::cout << "*** Before: " << glm::to_string(player.transform->position) << ", After: " << glm::to_string(orig_position) << std::endl;
+                    player.transform->position = orig_position;
+                }
+
+                // ---------- Coffee + side tables is only walkable on the top surface ----------
+                else if (drawable.transform->name == "SideTable.001" || drawable.transform->name == "SideTable.002" || drawable.transform->name == "SideTable.003"
+                     ||  (drawable.transform->name == "SideTable" && surface != TOP)) {
+                    player.transform->position = orig_position;
+                }
+                else if (drawable.transform->name == "Table.006" || drawable.transform->name == "Table.007" || drawable.transform->name == "Table.008" || drawable.transform->name == "Table.009" 
+                     ||  drawable.transform->name == "Table.002" || drawable.transform->name == "Table.003" || drawable.transform->name == "Table.004"
+                     || (drawable.transform->name == "Table.005" && surface != TOP)) {
+                    player.transform->position = orig_position;
+                }
+
+                // ---------- Only the top surfaces of the couch is walkable ----------
+                else if ((drawable.transform->name == "Couch.002")
+                      || (drawable.transform->name == "Couch.001" && surface != TOP) || (drawable.transform->name == "Couch.005" && surface != TOP) || (drawable.transform->name == "Couch.006" && surface != TOP) // couch board
+                      || (drawable.transform->name == "Couch.007" && surface != TOP) || (drawable.transform->name == "Couch.008" && surface != TOP)    // seat cushions
+                      || (drawable.transform->name == "Couch.003" && surface != TOP) || (drawable.transform->name == "Couch.004" && surface != TOP)) { // armrests
+                    player.transform->position = orig_position;
+                }
+
                 switch (surface) {
                     case TOP: {
                         std::cout << "TOP" << std::endl;

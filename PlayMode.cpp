@@ -494,7 +494,7 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
 }
 
 void PlayMode::update(float elapsed) {
-
+    glm::vec3 prev_player_position = player.transform->position;
 	//move player:
 	{
 		//combine inputs into a move:
@@ -543,45 +543,43 @@ void PlayMode::update(float elapsed) {
     // check for collisions:
     {
         for (auto &drawable : scene.drawables) {
-            // std::cout << drawable.transform->name << " "<< drawable.transform->top_stand << " " << drawable.transform->bot_stand 
-            //                     << " " << drawable.transform->front_stand << " " << drawable.transform->back_stand
-            //                     << " " << drawable.transform->left_stand << " " << drawable.transform->right_stand << std::endl;
-            // std::cout << drawable.transform->name << " "<< drawable.transform->bbox[3].x << " " << drawable.transform->bbox[3].y 
-            //                     << " " << drawable.transform->bbox[3].z << std::endl;
             if (drawable.transform->name == "Floor") continue;
-            if (drawable.transform->name == "Rug") continue;
+            if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
             if (drawable.transform->name == "Player") continue;
             if (drawable.transform->name == "Facing") continue;
 
             SurfaceType surface;
             if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
-                std::cout << drawable.transform->name << std::endl;
-                switch (surface) {
-                    case TOP: {
-                        std::cout << "TOP" << std::endl;
-                        break;
-                    }
-                    case BOT: {
-                        std::cout << "BOT" << std::endl;
-                        break;
-                    }
-                    case FRONT: {
-                        std::cout << "FRONT" << std::endl;
-                        break;
-                    }
-                    case BACK: {
-                        std::cout << "BACK" << std::endl;
-                        break;
-                    }
-                    case LEFT: {
-                        std::cout << "LEFT" << std::endl;
-                        break;
-                    }
-                    case RIGHT: {
-                        std::cout << "RIGHT" << std::endl;
-                        break;
-                    }
-                }
+                player.transform->position = prev_player_position;
+                break;
+
+                // std::cout << drawable.transform->name << std::endl;
+                // switch (surface) {
+                //     case TOP: {
+                //         std::cout << "TOP" << std::endl;
+                //         break;
+                //     }
+                //     case BOT: {
+                //         std::cout << "BOT" << std::endl;
+                //         break;
+                //     }
+                //     case FRONT: {
+                //         std::cout << "FRONT" << std::endl;
+                //         break;
+                //     }
+                //     case BACK: {
+                //         std::cout << "BACK" << std::endl;
+                //         break;
+                //     }
+                //     case LEFT: {
+                //         std::cout << "LEFT" << std::endl;
+                //         break;
+                //     }
+                //     case RIGHT: {
+                //         std::cout << "RIGHT" << std::endl;
+                //         break;
+                //     }
+                // }
             }
         }
     }
@@ -616,50 +614,50 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	scene.draw(*player.camera);
 
     { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-        glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+        // glDisable(GL_DEPTH_TEST);
+        // DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        for (auto &drawable : scene.drawables) {
-            // if (drawable.transform->name != "Plant") continue;
+        // for (auto &drawable : scene.drawables) {
+        //     // if (drawable.transform->name != "Plant") continue;
 
-            // // top
-            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // // top
+        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // // bottom
-            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // // bottom
+        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // left
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // left
+        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // // right
-            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // // right
+        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // // front
-            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // // front
+        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // // back
-            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // // back
+        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
 
-        }
+        // }
 
     }
 

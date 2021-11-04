@@ -20,6 +20,7 @@ struct PlayMode : Mode {
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
     void AttachToGround(Scene::Transform *transform);
+	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
 
 	//----- game state -----
 
@@ -27,7 +28,7 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up, space;
+	} left, right, down, up, space, swat;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
@@ -50,6 +51,8 @@ struct PlayMode : Mode {
         float init_up_v = 8.0f;
         float air_time = 0.0f;
         bool jumping = false;
+		bool swatting = false;
+		bool on_table = false;
 
         Scene::Transform *ground = nullptr;
         SurfaceType surface = TOP;

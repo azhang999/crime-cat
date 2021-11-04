@@ -63,4 +63,11 @@ struct PlayMode : Mode {
 	} player;
 
 	int score = 0;
+
+	Scene::Transform *vase_transform = nullptr;
+	bool vase_is_falling = false;
+	float vase_air_time = 0.0f;
+	float vase_starting_height;
+	glm::vec3 orig_vase_bbox[8];
+	bool vase_was_pushed = false;
 };

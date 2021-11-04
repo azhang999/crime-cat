@@ -87,52 +87,52 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
-void PlayMode::AttachToGround(Scene::Transform *transform) {
-    printf("Calling AttachToGround\n");
-    printf("1\n");
-    player.ground = transform;
-    if (transform->top_stand) {
-        printf("2\n");
-        player.surface = TOP;
-        printf("3\n");
-        player.transform->position.z = transform->bbox[2].z+ 1.0f;
-        printf("4\n");
-    } else if (transform->bot_stand) {
-        player.surface = BOT;
-        player.transform->position.z = transform->bbox[3].z+ 1.0f;
-    } else if (transform->front_stand) {
-        player.surface = FRONT;
-        player.transform->position.z = transform->bbox[3].z+ 1.0f;
-    } else if (transform->back_stand) {
-        player.surface = BACK;
-        player.transform->position.z = transform->bbox[0].z+ 1.0f;
-    } else if (transform->left_stand) {
-        player.surface = LEFT;
-        player.transform->position.z = transform->bbox[7].z+ 1.0f;
-    } else if (transform->right_stand) {
-        player.surface = RIGHT;
-        player.transform->position.z = transform->bbox[2].z+ 1.0f;
-    } else {
-        std::cout << transform->name << " does not have a standable surface " << std::endl;
-    }
+// void PlayMode::AttachToGround(Scene::Transform *transform) {
+//     printf("Calling AttachToGround\n");
+//     printf("1\n");
+//     player.ground = transform;
+//     if (transform->top_stand) {
+//         printf("2\n");
+//         player.surface = TOP;
+//         printf("3\n");
+//         player.transform->position.z = transform->bbox[2].z+ 1.0f;
+//         printf("4\n");
+//     } else if (transform->bot_stand) {
+//         player.surface = BOT;
+//         player.transform->position.z = transform->bbox[3].z+ 1.0f;
+//     } else if (transform->front_stand) {
+//         player.surface = FRONT;
+//         player.transform->position.z = transform->bbox[3].z+ 1.0f;
+//     } else if (transform->back_stand) {
+//         player.surface = BACK;
+//         player.transform->position.z = transform->bbox[0].z+ 1.0f;
+//     } else if (transform->left_stand) {
+//         player.surface = LEFT;
+//         player.transform->position.z = transform->bbox[7].z+ 1.0f;
+//     } else if (transform->right_stand) {
+//         player.surface = RIGHT;
+//         player.transform->position.z = transform->bbox[2].z+ 1.0f;
+//     } else {
+//         std::cout << transform->name << " does not have a standable surface " << std::endl;
+//     }
 
-    player.ground_level = player.transform->position.z;
-}
+//     player.ground_level = player.transform->position.z;
+// }
 
 
 
 PlayMode::PlayMode() : scene(*living_room_scene) {
 
     // get player transform - TODO don't loop through again
-    for (auto &drawable : scene.drawables) {
-        if (drawable.transform->name == "Player") {
-            player.transform = drawable.transform;
-            player.tip = player.transform->position;
-            player.tip.z += 1.0f;
-            player.base = player.transform->position;
-            player.base.z -= 1.0f;
-        }
-    }
+    // for (auto &drawable : scene.drawables) {
+    //     if (drawable.transform->name == "Player") {
+    //         player.transform = drawable.transform;
+    //         player.tip = player.transform->position;
+    //         player.tip.z += 1.0f;
+    //         player.base = player.transform->position;
+    //         player.base.z -= 1.0f;
+    //     }
+    // }
 
 
 
@@ -188,10 +188,18 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
                             << " " << transform->bbox[3].z << std::endl;
         if (drawable.transform->name == "Facing") {
             player.facing = drawable.transform;
-        } else if (drawable.transform->name == "Floor") {
-            player.ground = drawable.transform;
-            AttachToGround(drawable.transform);
+        } else if (drawable.transform->name == "Player") {
+            player.transform = drawable.transform;
+            player.tip = player.transform->position;
+            player.tip.z += 1.0f;
+            player.base = player.transform->position;
+            player.base.z -= 1.0f;
+            player.starting_height = player.transform->position.z;
         }
+        //else if (drawable.transform->name == "Floor") {
+        //     player.ground = drawable.transform;
+        //     AttachToGround(drawable.transform);
+        // }
 	}
 
     if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
@@ -505,95 +513,168 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
     return false;
 }
 
+std::string PlayMode::collide() {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
+        if (drawable.transform->name == "Player") continue;
+        if (drawable.transform->name == "Facing") continue;
+
+        SurfaceType surface;
+        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+            return drawable.transform->name;
+        }
+    }
+
+    return "";
+}
+
 void PlayMode::update(float elapsed) {
     glm::vec3 prev_player_position = player.transform->position;
 	//move player:
-	{
-		//combine inputs into a move:
-		constexpr float ground_speed = 8.0f;
-        constexpr float air_speed = 5.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.y = -1.0f;
-		if (!left.pressed && right.pressed) move.y = 1.0f;
-		if (down.pressed && !up.pressed) move.x = 1.0f;
-		if (!down.pressed && up.pressed) move.x = -1.0f;
-        if (!player.jumping && space.pressed)  {
-            player.jumping = true;
-        }
-        if (!player.swatting && swat.pressed) {
-            player.swatting = true;
-        }
 
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) {
-            if (player.jumping) {
-                move = glm::normalize(move) * air_speed * elapsed;
-            } else {
-                move = glm::normalize(move) * ground_speed * elapsed;
-            }
-            glm::vec3 movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
-		    player.transform->position += movement;
-        }
+    //combine inputs into a move:
+    constexpr float ground_speed = 8.0f;
+    constexpr float air_speed = 5.0f;
+    glm::vec2 move = glm::vec2(0.0f);
+    if (left.pressed && !right.pressed) move.y = -1.0f;
+    if (!left.pressed && right.pressed) move.y = 1.0f;
+    if (down.pressed && !up.pressed) move.x = 1.0f;
+    if (!down.pressed && up.pressed) move.x = -1.0f;
+    if (!player.jumping && space.pressed)  {
+        player.jumping = true;
+    }
+    if (!player.swatting && swat.pressed) {
+        player.swatting = true;
+    }
 
+    //make it so that moving diagonally doesn't go faster:
+    if (move != glm::vec2(0.0f)) {
         if (player.jumping) {
-            player.air_time += elapsed;
-            float player_starting_height = player.ground_level + 1.0f;
-            float height = player_starting_height + player.init_up_v * player.air_time + 0.5f * gravity * player.air_time * player.air_time;
-            if (height <= player_starting_height) {
-                player.transform->position.z = player_starting_height;
-                player.jumping = false;
-                player.air_time = 0.0f;
-            } else {
-                player.transform->position.z = height;
-            }
+            move = glm::normalize(move) * air_speed * elapsed;
+        } else {
+            move = glm::normalize(move) * ground_speed * elapsed;
         }
+        glm::vec3 movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
+        player.transform->position += movement;
+        player.tip = player.transform->position;
+        player.tip.z += 1.0f;
+        player.base = player.transform->position;
+        player.base.z -= 1.0f;
+    }
+
+    std::string object_collide_name = collide();
+
+    if (player.swatting && object_collide_name == "Key") {    // erase on swat
+        std::cout << "+++++++ SWATTING +++++++" << std::endl;
+
+        // erase key on swat
+        auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "Key"; });
+        scene.drawables.erase(key_iter);
+
+        player.swatting = false;
+    } else if (object_collide_name == "Vase" || object_collide_name == "Key") { //drawable.transform->name == "Key") {
+        std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
+
+        auto obj_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
         
-	}
+        auto obj = *(obj_iter);
+
+        obj.transform->position += (player.transform->position - prev_player_position);
+        for (auto i = 0; i < 8; i++) {
+                obj.transform->bbox[i] += (player.transform->position - prev_player_position);
+        }
+    } else if (object_collide_name != "") { // undo movement
+        player.transform->position = prev_player_position;
+        player.tip = prev_player_position;
+        player.tip.z += 1.0f;
+        player.base = prev_player_position;
+        player.base.z -= 1.0f;
+    }
+
+    prev_player_position = player.transform->position;
+
+
+    // // handle jumping and gravity
+    // if (player.jumping) {
+    //     player.air_time += elapsed;
+    //     if (player.air_time > 2.0f) {
+    //         player.air_time = 0.f;
+    //         player.jumping = false;
+    //     } else {
+    //         player.transform->position.z += 5.0f * elapsed;
+    //     }
+    // }
+
+
+    //  // gravity
+    // player.transform->position.z -= 2.0f * elapsed;
+
+    player.air_time += elapsed;
+    if (player.jumping) { // jumping
+        player.transform->position.z = player.starting_height + player.init_up_v * player.air_time + 0.5f * gravity * player.air_time * player.air_time;
+    } else { // just gravity
+        player.transform->position.z = player.starting_height + 0.5f * gravity * player.air_time * player.air_time;
+    }
 
     player.tip = player.transform->position;
     player.tip.z += 1.0f;
     player.base = player.transform->position;
     player.base.z -= 1.0f;
 
-    // check for collisions:
-    {
-        for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name == "Floor") continue;
-            if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
-            if (drawable.transform->name == "Player") continue;
-            if (drawable.transform->name == "Facing") continue;
+    object_collide_name = collide();
 
-            SurfaceType surface;
-            if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+    if (object_collide_name != "") {
+        player.transform->position = prev_player_position;
+        player.tip = prev_player_position;
+        player.tip.z += 1.0f;
+        player.base = prev_player_position;
+        player.base.z -= 1.0f;
+        player.jumping = false;
+        player.air_time = 0.f;
+        player.starting_height = player.transform->position.z;
+    }
 
-                if (player.swatting && drawable.transform->name == "Key") {    // erase on swat
-                    std::cout << "+++++++ SWATTING +++++++" << std::endl;
+    // // check for collisions:
+    // {
+    //     for (auto &drawable : scene.drawables) {
+    //         if (drawable.transform->name == "Floor") continue;
+    //         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
+    //         if (drawable.transform->name == "Player") continue;
+    //         if (drawable.transform->name == "Facing") continue;
 
-                    // erase key on swat
-                    auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                            [&drawable](const Scene::Drawable & elem) { return &elem == &drawable; });
-                    scene.drawables.erase(key_iter);
+    //         SurfaceType surface;
+    //         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
 
-                    player.swatting = false;
-                }
+    //             if (player.swatting && drawable.transform->name == "Key") {    // erase on swat
+    //                 std::cout << "+++++++ SWATTING +++++++" << std::endl;
 
-                if (drawable.transform->name == "Vase" || drawable.transform->name == "Key") { //drawable.transform->name == "Key") {
-                    std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
-                    drawable.transform->position += (player.transform->position - prev_player_position);
-                    for (auto i = 0; i < 8; i++) {
-                         drawable.transform->bbox[i] += (player.transform->position - prev_player_position);
-                    }
-                    return;     // don't want to reset position
-                }
+    //                 // erase key on swat
+    //                 auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+    //                                         [&drawable](const Scene::Drawable & elem) { return &elem == &drawable; });
+    //                 scene.drawables.erase(key_iter);
+
+    //                 player.swatting = false;
+    //             }
+
+    //             if (drawable.transform->name == "Vase" || drawable.transform->name == "Key") { //drawable.transform->name == "Key") {
+    //                 std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
+    //                 drawable.transform->position += (player.transform->position - prev_player_position);
+    //                 for (auto i = 0; i < 8; i++) {
+    //                      drawable.transform->bbox[i] += (player.transform->position - prev_player_position);
+    //                 }
+    //                 return;     // don't want to reset position
+    //             }
                 
-                if (drawable.transform->name == "Table.005" && surface == TOP) {
-                    if (!player.on_table) {
-                        std::cout << "now he is on the table" << std::endl;
-                        player.on_table = true;
-                    }
-                }
+    //             if (drawable.transform->name == "Table.005" && surface == TOP) {
+    //                 if (!player.on_table) {
+    //                     std::cout << "now he is on the table" << std::endl;
+    //                     player.on_table = true;
+    //                 }
+    //             }
 
-                player.transform->position = prev_player_position;
+    //             player.transform->position = prev_player_position;
 
                 // std::cout << drawable.transform->name << std::endl;
                 // switch (surface) {
@@ -622,37 +703,37 @@ void PlayMode::update(float elapsed) {
                 //         break;
                 //     }
                 // }
-            }
-            else {
-                if (drawable.transform->name == "Table.005" && player.on_table) {
-                    if (!((drawable.transform->bbox[1].x <= player.transform->position.x && player.transform->position.x <= drawable.transform->bbox[5].x)
-                       && (drawable.transform->bbox[1].y <= player.transform->position.y && player.transform->position.y <= drawable.transform->bbox[2].y))) {
+            // }
+            // else {
+            //     if (drawable.transform->name == "Table.005" && player.on_table) {
+            //         if (!((drawable.transform->bbox[1].x <= player.transform->position.x && player.transform->position.x <= drawable.transform->bbox[5].x)
+            //            && (drawable.transform->bbox[1].y <= player.transform->position.y && player.transform->position.y <= drawable.transform->bbox[2].y))) {
 
-                        std::cout << "*** WALK OFF TABLE, player position = " << glm::to_string(player.transform->position) << std::endl;
+            //             std::cout << "*** WALK OFF TABLE, player position = " << glm::to_string(player.transform->position) << std::endl;
                         
-                        player.air_time += elapsed;
-                        float player_starting_height = drawable.transform->bbox[5].z + 1.0f;
-                        float height = player_starting_height + 0.5f * gravity * player.air_time * player.air_time;
-                        std::cout << height << std::endl;
-                        if (height <= player.ground_level) {
-                            player.transform->position.z = player.ground_level;
-                            player.on_table = false;
-                            player.air_time = 0.0f;
-                        }
-                        else {
-                            player.transform->position.z = height;
-                        }
-                    }
-                    // player.transform->position.z = player.ground_level;
-                }
-            }            
-        }
-    }
+            //             player.air_time += elapsed;
+            //             float player_starting_height = drawable.transform->bbox[5].z + 1.0f;
+            //             float height = player_starting_height + 0.5f * gravity * player.air_time * player.air_time;
+            //             std::cout << height << std::endl;
+            //             if (height <= player.ground_level) {
+            //                 player.transform->position.z = player.ground_level;
+            //                 player.on_table = false;
+            //                 player.air_time = 0.0f;
+            //             }
+            //             else {
+            //                 player.transform->position.z = height;
+            //             }
+            //         }
+            //         // player.transform->position.z = player.ground_level;
+            //     }
+            // }            
+    //     }
+    // }
 
-    player.tip = player.transform->position;
-    player.tip.z += 1.0f;
-    player.base = player.transform->position;
-    player.base.z -= 1.0f;
+    // player.tip = player.transform->position;
+    // player.tip.z += 1.0f;
+    // player.base = player.transform->position;
+    // player.base.z -= 1.0f;
 
 
 

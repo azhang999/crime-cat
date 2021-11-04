@@ -21,6 +21,7 @@ struct PlayMode : Mode {
 
     void AttachToGround(Scene::Transform *transform);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
+    std::string collide();
 
 	//----- game state -----
 
@@ -54,8 +55,10 @@ struct PlayMode : Mode {
 		bool swatting = false;
 		bool on_table = false;
 
-        Scene::Transform *ground = nullptr;
-        SurfaceType surface = TOP;
-        float ground_level = 0.f;
+        float starting_height;
+
+        // Scene::Transform *ground = nullptr;
+        // SurfaceType surface = TOP;
+        // float ground_level = 0.f;
 	} player;
 };

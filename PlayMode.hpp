@@ -70,4 +70,7 @@ struct PlayMode : Mode {
 	float vase_starting_height;
 	glm::vec3 orig_vase_bbox[8];
 	bool vase_was_pushed = false;
+
+    Scene::Transform *wall1, *wall2, *wall3, *wall4;
+
 };

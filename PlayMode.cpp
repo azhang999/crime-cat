@@ -572,6 +572,8 @@ void PlayMode::update(float elapsed) {
                                 [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "Key"; });
         scene.drawables.erase(key_iter);
 
+        score += 3;
+
         player.swatting = false;
     } 
     if (player.swatting && object_collide_name == "Vase") {    // erase on swat
@@ -582,8 +584,12 @@ void PlayMode::update(float elapsed) {
                                 [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "Vase"; });
         scene.drawables.erase(vase_iter);
 
+        score += 5;
+
         player.swatting = false;
     } 
+
+
     // else if (object_collide_name == "Vase" || object_collide_name == "Key") { //drawable.transform->name == "Key") {
     //     std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
 
@@ -782,16 +788,16 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
     { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
         // glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+        // DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name != "Table.005") continue;
+        // for (auto &drawable : scene.drawables) {
+        //     if (drawable.transform->name != "Table.005") continue;
 
             // top
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
             // // bottom
             // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
@@ -824,7 +830,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
             // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
 
-        }
+        // }
 
     }
 
@@ -848,6 +854,17 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+
+        constexpr float score_H = 0.12f;
+        lines.draw_text("Score: " + std::to_string(score),
+            glm::vec3(-aspect + 0.1f * score_H, -1.0 + 0.1f * score_H + 0.2f, 0.0),
+			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		ofs = 2.0f / drawable_size.y;
+		lines.draw_text("Score: " + std::to_string(score),
+			glm::vec3(-aspect + 0.1f * score_H + ofs, -1.0 + + 0.1f * score_H + ofs + 0.2f, 0.0),
+			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
 	GL_ERRORS();

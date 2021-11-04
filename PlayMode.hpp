@@ -61,4 +61,6 @@ struct PlayMode : Mode {
         // SurfaceType surface = TOP;
         // float ground_level = 0.f;
 	} player;
+
+	int score = 0;
 };

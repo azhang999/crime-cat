@@ -565,7 +565,7 @@ void PlayMode::update(float elapsed) {
     std::string object_collide_name = collide();
 
     if (player.swatting && object_collide_name == "Key") {    // erase on swat
-        std::cout << "+++++++ SWATTING +++++++" << std::endl;
+        std::cout << "+++++++ SWATTING Key +++++++" << std::endl;
 
         // erase key on swat
         auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
@@ -573,19 +573,31 @@ void PlayMode::update(float elapsed) {
         scene.drawables.erase(key_iter);
 
         player.swatting = false;
-    } else if (object_collide_name == "Vase" || object_collide_name == "Key") { //drawable.transform->name == "Key") {
-        std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
+    } 
+    if (player.swatting && object_collide_name == "Vase") {    // erase on swat
+        std::cout << "+++++++ SWATTING Vase +++++++" << std::endl;
 
-        auto obj_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
+        // erase key on swat
+        auto vase_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "Vase"; });
+        scene.drawables.erase(vase_iter);
+
+        player.swatting = false;
+    } 
+    // else if (object_collide_name == "Vase" || object_collide_name == "Key") { //drawable.transform->name == "Key") {
+    //     std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
+
+    //     auto obj_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+    //                             [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
         
-        auto obj = *(obj_iter);
+    //     auto obj = *(obj_iter);
 
-        obj.transform->position += (player.transform->position - prev_player_position);
-        for (auto i = 0; i < 8; i++) {
-                obj.transform->bbox[i] += (player.transform->position - prev_player_position);
-        }
-    } else if (object_collide_name != "") { // undo movement
+    //     obj.transform->position += (player.transform->position - prev_player_position);
+    //     for (auto i = 0; i < 8; i++) {
+    //             obj.transform->bbox[i] += (player.transform->position - prev_player_position);
+    //     }
+    // } 
+    else if (object_collide_name != "") { // undo movement
         player.transform->position = prev_player_position;
         player.tip = prev_player_position;
         player.tip.z += 1.0f;

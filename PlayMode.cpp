@@ -16,7 +16,6 @@
 
 GLuint living_room_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > living_room_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-    printf("CALLING LIVING_ROOM_MESHES\n");
 	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"), data_path("living_room.boundbox"));
 	living_room_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
@@ -180,12 +179,12 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
 
 
 
-        auto transform = drawable.transform;
-        std::cout << transform->name << " "<< transform->top_stand << " " << transform->bot_stand 
-                            << " " << transform->front_stand << " " << transform->back_stand
-                            << " " << transform->left_stand << " " << transform->right_stand << std::endl;
-        std::cout << transform->name << " "<< transform->bbox[3].x << " " << transform->bbox[3].y 
-                            << " " << transform->bbox[3].z << std::endl;
+        // auto transform = drawable.transform;
+        // std::cout << transform->name << " "<< transform->top_stand << " " << transform->bot_stand 
+        //                     << " " << transform->front_stand << " " << transform->back_stand
+        //                     << " " << transform->left_stand << " " << transform->right_stand << std::endl;
+        // std::cout << transform->name << " "<< transform->bbox[3].x << " " << transform->bbox[3].y 
+        //                     << " " << transform->bbox[3].z << std::endl;
         if (drawable.transform->name == "Facing") {
             player.facing = drawable.transform;
         } else if (drawable.transform->name == "Player") {
@@ -200,7 +199,42 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
         //     player.ground = drawable.transform;
         //     AttachToGround(drawable.transform);
         // }
+
+        // --------------------------------------------------
+        if (drawable.transform->name != "Player") {
+            // std::cout << drawable.transform->name << ": ";
+            auto scale = drawable.transform->scale;
+
+            float radius = (std::max(scale.x, scale.y) + 0.25) / 2;
+            float half_height = scale.z / 2;
+
+            glm::vec3 tip  = drawable.transform->position;
+            glm::vec3 base = drawable.transform->position;
+            tip.z  += half_height;
+            base.z -= half_height;
+
+            objects.push_back(
+                RoomObject(drawable.transform->name, drawable.transform, drawable.transform->bbox, drawable.transform->position.z,
+                           radius, tip, base, CollisionType::Swat)
+            );
+
+            // std::cout << "\t" << glm::to_string(drawable.transform->scale) << std::endl;
+        }
+        // --------------------------------------------------
 	}
+
+    // std::cout << "\n***** Looping through objects ****" << std::endl;
+    for (auto obj: objects) {
+        std::cout << obj.name << " scale: " << glm::to_string(obj.transform->scale) << std::endl;
+
+        std::cout << "Radius: " << obj.capsule.radius << std::endl;
+        std::cout << "Tip: " << glm::to_string(obj.capsule.tip) << std::endl;
+        std::cout << "Base: " << glm::to_string(obj.capsule.base) << std::endl;
+
+        std::cout << "" << std::endl;
+    }
+
+
 
     auto player_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                 [](const Scene::Drawable & elem) { return elem.transform->name == "Player"; });
@@ -537,6 +571,11 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
     return false;
 }
 
+// SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
+bool capsule_capsule_collision() {
+    return true;
+}
+
 std::string PlayMode::collide() {
     for (auto &drawable : scene.drawables) {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
@@ -572,21 +611,23 @@ std::string PlayMode::collide() {
 
 void PlayMode::update(float elapsed) {
     glm::vec3 prev_player_position = player.transform->position;
+    
 	//move player:
-
     //combine inputs into a move:
-    constexpr float ground_speed = 8.0f;
-    constexpr float air_speed = 5.0f;
-    glm::vec2 move = glm::vec2(0.0f);
-    if (left.pressed && !right.pressed) move.y = -1.0f;
-    if (!left.pressed && right.pressed) move.y = 1.0f;
-    if (down.pressed && !up.pressed) move.x = 1.0f;
-    if (!down.pressed && up.pressed) move.x = -1.0f;
-    if (!player.jumping && space.pressed)  {
-        player.jumping = true;
-    }
-    if (!player.swatting && swat.pressed) {
-        player.swatting = true;
+    {
+        constexpr float ground_speed = 8.0f;
+        constexpr float air_speed = 5.0f;
+        glm::vec2 move = glm::vec2(0.0f);
+        if (left.pressed && !right.pressed) move.y = -1.0f;
+        if (!left.pressed && right.pressed) move.y = 1.0f;
+        if (down.pressed && !up.pressed) move.x = 1.0f;
+        if (!down.pressed && up.pressed) move.x = -1.0f;
+        if (!player.jumping && space.pressed)  {
+            player.jumping = true;
+        }
+        if (!player.swatting && swat.pressed) {
+            player.swatting = true;
+        }
     }
 
     //make it so that moving diagonally doesn't go faster:

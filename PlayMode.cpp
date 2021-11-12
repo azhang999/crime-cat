@@ -297,8 +297,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			);
 
             // face left, face right
-			glm::vec3 up = glm::vec3(0.f, 0.f, 1.f);
-			player.transform->rotation = glm::angleAxis(-motion.x * player.camera->fovy, up) * player.transform->rotation;
+            phi -= motion.x;
+            theta -= motion.y;
+			theta = -std::min(-theta, 0.5f * 3.1415926f);
+			theta = -std::max(-theta, 0.05f * 3.1415926f);
 
             // face up, face down [TODO: let camera rotate up and down]
 			// float pitch = glm::pitch(player.camera->transform->rotation);
@@ -578,8 +580,8 @@ void PlayMode::update(float elapsed) {
     constexpr float ground_speed = 8.0f;
     constexpr float air_speed = 5.0f;
     glm::vec2 move = glm::vec2(0.0f);
-    if (left.pressed && !right.pressed) move.y = -1.0f;
-    if (!left.pressed && right.pressed) move.y = 1.0f;
+    // if (left.pressed && !right.pressed) move.y = -1.0f;
+    // if (!left.pressed && right.pressed) move.y = 1.0f;
     if (down.pressed && !up.pressed) move.x = 1.0f;
     if (!down.pressed && up.pressed) move.x = -1.0f;
     if (!player.jumping && space.pressed)  {
@@ -602,6 +604,15 @@ void PlayMode::update(float elapsed) {
         player.tip.z += 1.0f;
         player.base = player.transform->position;
         player.base.z -= 1.0f;
+    }
+
+    { // rotate player
+        glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
+
+        if (left.pressed && !right.pressed)
+            player.transform->rotation *= glm::angleAxis(3.0f * elapsed, up);
+        if (!left.pressed && right.pressed)
+            player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
 
     std::string object_collide_name = collide();
@@ -865,6 +876,22 @@ void PlayMode::update(float elapsed) {
     // player.base = player.transform->position;
     // player.base.z -= 1.0f;
 
+    {
+        // TODO: remove this once the camera is no longer a child of the cat
+        player.camera->transform->parent = nullptr;
+
+
+        glm::vec3 camera_offset = glm::vec3(
+            camera_radius * cos(phi + M_PI/2) * sin(theta),
+            camera_radius * sin(phi + M_PI/2) * sin(theta),
+            camera_radius * cos(theta));
+        
+        glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
+        glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
+        player.camera->transform->position = player.transform->position + camera_offset;
+        player.camera->transform->rotation = glm::angleAxis(phi, up);
+        player.camera->transform->rotation *= glm::angleAxis(-theta, right);
+    }
 
 
 

@@ -64,6 +64,10 @@ struct PlayMode : Mode {
 
 	int score = 0;
 
+	float theta = 0;
+	float phi = M_PI/2;
+	float camera_radius = 10.0f;
+
 	Scene::Transform *vase_transform = nullptr;
 	bool vase_is_falling = false;
 	float vase_air_time = 0.0f;

@@ -12,21 +12,21 @@
 
 enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
 
-// Every object in the scene has a type of collision
-typedef enum CollisionType_t {
-	Swat = 0,		// default
-	KnockOver = 1,
-	PushOff = 2,
-} CollisionType;
+enum CollisionType {
+	None,
+	Swat,
+	KnockOver,
+	PushOff,
+};
 
 const float DIST_EPS = 0.01f;
 class RoomObject {
 	public:
-		RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], float starting_height_, 
-				float radius_, float height_, glm::vec3 tip_, glm::vec3 base_,
-				CollisionType collision_type_) : 
-			name(name_), transform(transform_), starting_height(starting_height_), 
-			/*radius(radius_), tip(tip_), base(base_),*/ collision_type(collision_type_) {
+		RoomObject() {};		// empty for when we just want to save a reference
+
+		RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], CollisionType collision_type_, 
+				float radius_, float height_, glm::vec3 tip_, glm::vec3 base_) : 
+			name(name_), transform(transform_), collision_type(collision_type_) {
 			
 			for (auto i = 0; i < 8; i++) {
 				this->orig_bbox[i] = orig_bbox_[i];
@@ -42,7 +42,6 @@ class RoomObject {
 		std::string name;
 		Scene::Transform *transform = nullptr;
 		glm::vec3 orig_bbox[8];
-		float starting_height = 0;
 
 		// ----- Capsule properties -----
 		struct Capsule {
@@ -53,17 +52,20 @@ class RoomObject {
 		};
 		Capsule capsule;
 	
-		// ----- Collision properties -----
-		CollisionType collision_type = Swat;
+		// ----- Collision detection properties -----
+		CollisionType collision_type = None;
+		bool collided = false;					 // vase_was_pushed
+		bool done = false;						 // vase_done
 		glm::vec3 pen_dir;
 		float pen_depth;
 	
+		// ----- Collision resolution -----
 		// helpful for time-variability
-		bool collided = false;
-		bool is_falling = false;
-		bool done = false;
-		float air_time = 0.0f;
-		glm::vec3 prev_position = glm::vec3(0);
+		bool is_falling = false;				 // vase_is_falling
+		float air_time = 0.0f;					 // vase_air_time
+		glm::vec3 prev_position;	 			 // vase_orig
+		float start_height = 0.0f;				 // vase_starting_height
+		float end_height   = 0.0f;				 // rug_height
 };
 
 
@@ -124,16 +126,17 @@ struct PlayMode : Mode {
 
 	int score = 0;
 
-	Scene::Transform *vase_transform = nullptr;
-	bool vase_is_falling = false;
-	float vase_air_time = 0.0f;
-	float vase_starting_height;
-	glm::vec3 orig_vase_bbox[8];
-	bool vase_was_pushed = false;
-	bool vase_done = false;
-	glm::vec3 vase_orig = glm::vec3(0);
+	// Scene::Transform *vase_transform = nullptr;
+	// bool vase_is_falling = false;
+	// float vase_air_time = 0.0f;
+	// float vase_starting_height;
+	// glm::vec3 orig_vase_bbox[8];
 
-    Scene::Transform *wall1, *wall2, *wall3, *wall4, *floor;
-	float rug_height = 0.0f;
+	// bool vase_was_pushed = false;		
 
+	// bool vase_done = false;
+	// glm::vec3 vase_orig = glm::vec3(0);
+	// float rug_height = 0.0f;
+
+    Scene::Transform *wall1, *wall2, *wall3, *wall4;
 };

@@ -145,6 +145,7 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
         // }
         else if (drawable.transform->name == "Vase") {          // SAVE TRANSFORMS FROM THE STARTD
             vase_transform = drawable.transform;
+            vase_starting_height = drawable.transform->position.z;
         }
 
         // --------------------------------------------------
@@ -312,7 +313,8 @@ glm::vec3 closest_point_on_line_segment(glm::vec3 A, glm::vec3 B, glm::vec3 Poin
 }
 
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
-bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2,
+                                glm::vec3 *pen_normal, float *pen_depth) {
     // float3 p0, p1, p2; // triangle corners
     // float3 center; // sphere center
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
@@ -350,44 +352,47 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     intersects |= distsq3 < radiussq;
 
     if (inside || intersects) {
-        // float3 best_point = point0;
-        // float3 intersection_vec;
+        glm::vec3 best_point = point0;
+        glm::vec3 intersection_vec;
         
-        // if (inside) {
-        //     intersection_vec = center - point0;
-        // } else {
-        //     float3 d = center - point1;
-        //     float best_distsq = dot(d, d);
-        //     best_point = point1;
-        //     intersection_vec = d;
+        if (inside) {
+            intersection_vec = center - point0;
+        } else {
+            float distsq;
+
+            glm::vec3 d = center - point1;
+            float best_distsq = dot(d, d);
+            best_point = point1;
+            intersection_vec = d;
         
-        //     d = center - point2;
-        //     float distsq = dot(d, d);
-        //     if (distsq < best_distsq) {
-        //         distsq = best_distsq;
-        //         best_point = point2;
-        //         intersection_vec = d;
-        //     }
+            d = center - point2;
+            distsq = dot(d, d);
+            if (distsq < best_distsq) {
+                best_distsq = distsq;
+                best_point = point2;
+                intersection_vec = d;
+            }
         
-        //     d = center - point3;
-        //     float distsq = dot(d, d);
-        //     if (distsq < best_distsq) {
-        //         distsq = best_distsq;
-        //         best_point = point3; 
-        //         intersection_vec = d;
-        //     }
-        // }
+            d = center - point3;
+            distsq = glm::dot(d, d);
+            if (distsq < best_distsq) {
+                best_distsq = distsq;
+                best_point = point3; 
+                intersection_vec = d;
+            }
+        }
         
-        // float3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
-        // float3 penetration_normal = penetration_vec / len;  // normalize
-        // float penetration_depth = radius - len; // radius = sphere radius
-        return true; // intersection success
+        float len = glm::length(intersection_vec);
+        *pen_normal = glm::normalize(intersection_vec);
+        *pen_depth = radius - len;
+        return true;
     }
 
     return false;
 }
 
-bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius) {
+bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius, 
+                                         glm::vec3 *pen_normal, float *pen_depth) {
     glm::vec3 close0 = closest_point_on_line_segment(A, B, p0);
     glm::vec3 close1 = closest_point_on_line_segment(A, B, p1);
     glm::vec3 close2 = closest_point_on_line_segment(A, B, p2);
@@ -407,12 +412,13 @@ bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0,
         d = temp_d;
     }
 
-    return sphere_triangle_collision(center, radius, p0, p1, p2);
+    return sphere_triangle_collision(center, radius, p0, p1, p2, pen_normal, pen_depth);
 }
 
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
 // Note for triangle normal, p0, p1, p2 matters
-bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2,
+                                glm::vec3 *pen_normal, float *pen_depth) {
     // Compute capsule line endpoints A, B like before in capsule-capsule case:
     glm::vec3 CapsuleNormal = glm::normalize(tip - base); 
     glm::vec3 LineEndOffset = CapsuleNormal * radius; 
@@ -424,7 +430,7 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
 
     if (std::abs(glm::dot(N, CapsuleNormal)) == 0.f) {
-        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius);
+        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius, pen_normal, pen_depth);
     }
 
 
@@ -473,51 +479,53 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     // The center of the best sphere candidate:
     glm::vec3 center = closest_point_on_line_segment(A, B, reference_point);
 
-    return sphere_triangle_collision(center, radius, p0, p1, p2);
+    return sphere_triangle_collision(center, radius, p0, p1, p2, pen_normal, pen_depth);
 }
 
 bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius, 
-                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
-    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1)) {
+                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, 
+                                glm::vec3 *pen_normal, float *pen_depth) {
+    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1, pen_normal, pen_depth)) {
         return true;
     }
 
-    return capsule_triangle_collision(tip, base, radius, p2, p1, p3);
+    return capsule_triangle_collision(tip, base, radius, p2, p1, p3, pen_normal, pen_depth);
 }
 
-bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, SurfaceType *surface) {
+bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, 
+                                SurfaceType *surface, glm::vec3 *pen_normal, float *pen_depth) {
     // top
-    if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2], pen_normal, pen_depth)) {
         *surface = TOP;
         return true;
     }
 
     // bottom
-    if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0], pen_normal, pen_depth)) {
         *surface = BOT;
         return true;
     }
 
     // left
-    if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7], pen_normal, pen_depth)) {
         *surface = LEFT;
         return true;
     }
 
     // right
-    if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0], pen_normal, pen_depth)) {
         *surface = RIGHT;
         return true;
     }
 
     // front
-    if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3], pen_normal, pen_depth)) {
         *surface = FRONT;
         return true;
     }
 
     // back
-    if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4], pen_normal, pen_depth)) {
         *surface = BACK;
         return true;
     }
@@ -572,7 +580,7 @@ bool capsule_capsule_collision(float a_radius, glm::vec3 a_tip, glm::vec3 a_base
     return (penetration_depth > 0);
 }
 
-std::string PlayMode::capsule_collide(RoomObject &current_obj) {
+std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth) {
     for (auto obj : objects) {
         if (obj.name == "Rug") continue; // Rug is kinda blocky
         if (obj.name == "Player") continue;
@@ -586,9 +594,12 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj) {
 
         auto capsule = current_obj.capsule;
 
+        // ---------------------< START HEERE - SAVE + GETN INFO ABOUT OCLLISION MAG+DIR
+
         SurfaceType surface;
-        if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface)) {
-            std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << "\n" << std::endl;
+        if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface, pen_normal, pen_depth)) {
+            std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << ", direction: " 
+            << glm::to_string(*pen_normal) << ", depth: " << *pen_depth << std::endl;
             return obj.name;
         }
     }
@@ -597,19 +608,9 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj) {
 
 
 std::string PlayMode::collide() {
-    // for (auto obj : objects) {
-    //     if (obj.name == "Rug") continue; // Rug is kinda blocky
-    //     if (obj.name == "Player") continue;
-    //     if (obj.name == "Facing") continue;
-    //     if (obj.name == "CatPlayer") continue;
 
-    //     if (obj.name == "Floor") continue;      // TODO uncomment this later, seems like floor collisions are necessary
-
-    //     if (capsule_capsule_collision(player.radius, player.tip, player.base, obj.capsule.radius, obj.capsule.tip, obj.capsule.base)) {
-    //         std::cout << "\nCAPSULE COLLISION: " << obj.name << "\n" << std::endl;
-    //         return obj.name;
-    //     }
-    // }
+    glm::vec3 penetration_normal;
+    float penetration_depth;
 
     for (auto &drawable : scene.drawables) {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
@@ -618,31 +619,27 @@ std::string PlayMode::collide() {
         if (drawable.transform->name == "CatPlayer") continue;
 
         SurfaceType surface;
-        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
             return drawable.transform->name;
         }
     }
 
     SurfaceType surface;
-    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall1->bbox, &surface)) {
+    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall1->bbox, &surface, &penetration_normal, &penetration_depth)) {
         return wall1->name;
     }
 
-    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall2->bbox, &surface)) {
+    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall2->bbox, &surface, &penetration_normal, &penetration_depth)) {
         return wall2->name;
     }
 
-    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall3->bbox, &surface)) {
+    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall3->bbox, &surface, &penetration_normal, &penetration_depth)) {
         return wall3->name;
     }
 
-    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall4->bbox, &surface)) {
+    if (capsule_bbox_collision(player.tip, player.base, player.radius, wall4->bbox,&surface, &penetration_normal, &penetration_depth)) {
         return wall4->name;
     }
-
-    // if (capsule_bbox_collision(player.tip, player.base, player.radius, floor->bbox, &surface)) {
-    //     return "Floor";
-    // }
 
     return "";
 }
@@ -652,7 +649,7 @@ void PlayMode::update(float elapsed) {
 
 	//move player:
     //combine inputs into a move:
-    constexpr float ground_speed = 8.0f;
+    constexpr float ground_speed = 4.0f;
     constexpr float air_speed = 5.0f;
     glm::vec2 move = glm::vec2(0.0f);
     if (left.pressed && !right.pressed) move.y = -1.0f;
@@ -716,34 +713,60 @@ void PlayMode::update(float elapsed) {
                                         [](const RoomObject & elem) { return elem.name == "Vase"; });
         auto &vase_obj = *(vase_obj_iter);
 
-        if (capsule_collide(vase_obj) == "") {    // Move capsule in absence of collisions
+        if (capsule_collide(vase_obj, &vase_obj.pen_dir, &vase_obj.pen_depth) == "") {    // Move capsule in absence of collisions
             // std::cout << "DIFF: " << glm::to_string((player.transform->position - prev_player_position)) << std::endl;
             // std::cout << "Base before: " << glm::to_string(vase_obj.capsule.base);
             vase_obj.capsule.tip = vase_obj.capsule.tip + offset;
             vase_obj.capsule.base = vase_obj.capsule.base + offset;
             // std::cout << "\tBase after: " << glm::to_string(vase_obj.capsule.base);
 
-            // Get sidetable top object for table-item location detection
+            // ------- Get sidetable top object for table-item location detection --------
             auto sidetable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                     [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "SideTable"; });
             auto sidetable = *(sidetable_iter);
 
-            if (!vase_was_pushed &&
+            if (!vase_was_pushed && 
                 !((sidetable.transform->bbox[1].x <= obj.transform->position.x && obj.transform->position.x <= sidetable.transform->bbox[5].x)
-            && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
-                // std::cout << "VASE IS FALLING" << std::endl;
+               && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
                 vase_is_falling = true;
-                vase_starting_height = obj.transform->position.z;
-                // vase_transform = obj.transform;                  -------> Moved this above
                 for (auto i = 0; i < 8; i++) {
                     orig_vase_bbox[i].z = obj.transform->bbox[i].z;
                 }
             }
         }
-        else {  // Undo movement 
-            obj.transform->position = vase_orig;
-            for (auto i = 0; i < 8; i++) {
-                obj.transform->bbox[i] = orig_vase_bbox[i];
+        else {  // ------- COLLISION OCCURED -------
+            // Slide-alone code inspired from https://wickedengine.net/2020/04/26/capsule-collision-detection/, "Usage"
+            // TODO: Assumes objects are off the same weight - can add per-object weights (i.e. heavier objects = slower velocities)
+            glm::vec3 obj_velocity = (vase_transform->position - vase_orig) / elapsed;
+            float obj_velocity_length = glm::length(obj_velocity);
+
+            std::cout << "MOVEMENT VELOCITY: " << glm::to_string(obj_velocity) << ", normalized = " << glm::to_string(glm::normalize(obj_velocity)) << ", length = " << obj_velocity_length << std::endl;
+
+            obj_velocity = glm::normalize(obj_velocity);
+
+            if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
+
+                // Fix velocity
+                glm::vec3 undesired_motion = vase_obj.pen_dir * glm::dot(vase_obj.pen_dir, obj_velocity);
+                glm::vec3 desired_motion = obj_velocity - undesired_motion;
+                obj_velocity = obj_velocity_length * desired_motion;
+                std::cout << "DESIRED MOTION: " << glm::to_string(desired_motion) << std::endl;
+                std::cout << "REVISED VELOCITY: " << glm::to_string(obj_velocity) << std::endl;
+
+                // Undo movement 
+                // obj.transform->position = vase_orig;
+                // for (auto i = 0; i < 8; i++) {
+                //     obj.transform->bbox[i] = orig_vase_bbox[i];
+                // }
+
+                // Re-do object movement with displacement vector calculated using this new velocity
+                glm::vec3 displacement = obj_velocity * elapsed;
+                obj.transform->position = vase_orig + displacement;
+                for (auto i = 0; i < 8; i++) {
+                    obj.transform->bbox[i] = orig_vase_bbox[i] + displacement;
+                }
+                vase_obj.capsule.tip  += displacement;
+                vase_obj.capsule.base += displacement;
             }
         }
     } 
@@ -860,16 +883,18 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
             auto base = obj.capsule.base;
             auto radius = obj.capsule.radius;
 
+            // std::cout << "Penetration direction: " << glm::to_string(obj.pen_dir) << ", depth: " << obj.pen_depth << std::endl;
+
             // tip
             auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
             auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
             auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
             auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
             
-            draw_lines.draw(A, C, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(B, C, glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(A, D, glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+            draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
 
             // base
             auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
@@ -877,16 +902,19 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
             auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
             auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
             
-            draw_lines.draw(E, G, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(F, G, glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(E, H, glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+            draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
 
             // sides
             draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
             draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
             draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
             draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+
+
+            // -------- penetration vector --------
         // }
 
         // for (auto &drawable : scene.drawables) {

@@ -53,6 +53,8 @@ class RoomObject {
 	
 		// ----- Collision properties -----
 		CollisionType collision_type = Swat;
+		glm::vec3 pen_dir;
+		float pen_depth;
 	
 		// helpful for time-variability
 		bool collided = false;
@@ -75,7 +77,7 @@ struct PlayMode : Mode {
     void AttachToGround(Scene::Transform *transform);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
     std::string collide();
-	std::string capsule_collide(RoomObject &current_obj);
+	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
 
 	//----- game state -----
 

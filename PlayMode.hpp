@@ -7,8 +7,61 @@
 
 #include <vector>
 #include <deque>
+#include <iostream>
+
 
 enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
+
+// Every object in the scene has a type of collision
+typedef enum CollisionType_t {
+	Swat = 0,		// default
+	KnockOver = 1,
+	PushOff = 2,
+} CollisionType;
+
+
+class RoomObject {
+	public:
+		RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], float starting_height_, 
+				float radius_, glm::vec3 tip_, glm::vec3 base_,
+				CollisionType collision_type_) : 
+			name(name_), transform(transform_), starting_height(starting_height_), 
+			/*radius(radius_), tip(tip_), base(base_),*/ collision_type(collision_type_) {
+			
+			for (auto i = 0; i < 8; i++) {
+				this->orig_bbox[i] = orig_bbox_[i];
+			}
+
+			this->capsule.radius = radius_;
+			this->capsule.tip 	 = tip_;
+			this->capsule.base 	 = base_;
+		}
+
+		// ----- Transform properties -----
+		std::string name;
+		Scene::Transform *transform = nullptr;
+		glm::vec3 orig_bbox[8];
+		float starting_height = 0;
+
+		// ----- Capsule properties -----
+		struct Capsule {
+			float radius = 0.5f; // default
+			glm::vec3 tip;		 // tip position
+			glm::vec3 base; 	 // base position
+		};
+		Capsule capsule;
+	
+		// ----- Collision properties -----
+		CollisionType collision_type = Swat;
+	
+		// helpful for time-variability
+		bool collided = false;
+		bool is_falling = false;
+		bool done = false;
+		float air_time = 0.0f;
+		glm::vec3 prev_position = glm::vec3(0);
+};
+
 
 struct PlayMode : Mode {
 	PlayMode();
@@ -22,6 +75,7 @@ struct PlayMode : Mode {
     void AttachToGround(Scene::Transform *transform);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
     std::string collide();
+	std::string capsule_collide(RoomObject &current_obj);
 
 	//----- game state -----
 
@@ -62,61 +116,7 @@ struct PlayMode : Mode {
         // float ground_level = 0.f;
 	} player;
 
-
-	// Every object in the scene has a type of collision
-	typedef enum CollisionType_t {
-		Swat = 0,		// default
-		KnockOver = 1,
-		PushOff = 2,
-	} CollisionType;
-
-
-	class RoomObject {
-		public:
-			RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], float starting_height_, 
-					float radius_, glm::vec3 tip_, glm::vec3 base_,
-					CollisionType collision_type_) : 
-				name(name_), transform(transform_), starting_height(starting_height_), 
-				/*radius(radius_), tip(tip_), base(base_),*/ collision_type(collision_type_) {
-				
-				for (auto i = 0; i < 8; i++) {
-					this->orig_bbox[i] = orig_bbox_[i];
-				}
-
-				this->capsule.radius = radius_;
-				this->capsule.tip 	 = tip_;
-				this->capsule.base 	 = base_;
-
-				// this->radius 		  = std::max();
-				// this->tip 			  = transform->position + 1.0f;
-				// this->base			  = transform->position - 1.0f;
-				// this->starting_height = transform_->position.z;
-			}
-
-			// ----- Transform properties -----
-			std::string name;
-			Scene::Transform *transform = nullptr;
-			glm::vec3 orig_bbox[8];
-			float starting_height = 0;
-
-			// ----- Capsule properties -----
-			struct Capsule {
-				float radius = 0.5f; // default
-				glm::vec3 tip;		 // tip position
-				glm::vec3 base; 	 // base position
-			};
-			Capsule capsule;
-		
-			// ----- Collision properties -----
-			CollisionType collision_type = Swat;
-		
-			// helpful for time-variability
-			bool collided = false;
-			bool is_falling = false;
-			float air_time = 0.0f;
-	};
 	std::vector<RoomObject> objects;
-
 
 	int score = 0;
 
@@ -126,7 +126,9 @@ struct PlayMode : Mode {
 	float vase_starting_height;
 	glm::vec3 orig_vase_bbox[8];
 	bool vase_was_pushed = false;
+	bool vase_done = false;
+	glm::vec3 vase_orig = glm::vec3(0);
 
-    Scene::Transform *wall1, *wall2, *wall3, *wall4;
+    Scene::Transform *wall1, *wall2, *wall3, *wall4, *floor;
 
 };

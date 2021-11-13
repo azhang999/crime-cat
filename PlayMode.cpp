@@ -86,54 +86,7 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
-// void PlayMode::AttachToGround(Scene::Transform *transform) {
-//     printf("Calling AttachToGround\n");
-//     printf("1\n");
-//     player.ground = transform;
-//     if (transform->top_stand) {
-//         printf("2\n");
-//         player.surface = TOP;
-//         printf("3\n");
-//         player.transform->position.z = transform->bbox[2].z+ 1.0f;
-//         printf("4\n");
-//     } else if (transform->bot_stand) {
-//         player.surface = BOT;
-//         player.transform->position.z = transform->bbox[3].z+ 1.0f;
-//     } else if (transform->front_stand) {
-//         player.surface = FRONT;
-//         player.transform->position.z = transform->bbox[3].z+ 1.0f;
-//     } else if (transform->back_stand) {
-//         player.surface = BACK;
-//         player.transform->position.z = transform->bbox[0].z+ 1.0f;
-//     } else if (transform->left_stand) {
-//         player.surface = LEFT;
-//         player.transform->position.z = transform->bbox[7].z+ 1.0f;
-//     } else if (transform->right_stand) {
-//         player.surface = RIGHT;
-//         player.transform->position.z = transform->bbox[2].z+ 1.0f;
-//     } else {
-//         std::cout << transform->name << " does not have a standable surface " << std::endl;
-//     }
-
-//     player.ground_level = player.transform->position.z;
-// }
-
-
-
 PlayMode::PlayMode() : scene(*living_room_scene) {
-
-    // get player transform - TODO don't loop through again
-    // for (auto &drawable : scene.drawables) {
-    //     if (drawable.transform->name == "Player") {
-    //         player.transform = drawable.transform;
-    //         player.tip = player.transform->position;
-    //         player.tip.z += 1.0f;
-    //         player.base = player.transform->position;
-    //         player.base.z -= 1.0f;
-    //     }
-    // }
-
-
 
     for (auto &drawable : scene.drawables) {
         BoundBox const &bbox = living_room_meshes->lookup_bound_box(drawable.transform->name);
@@ -153,15 +106,6 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
         glm::vec3 up = glm::vec3(0.f, 0.f, 1.f);
         float deg_45_in_rad = 0.7854f;
 
-        // std::cout << drawable.transform->name << std::endl;
-        // std::cout << bbox.P1[0] << " " << bbox.P1[1] << " " << bbox.P1[2] << std::endl;
-        // std::cout << bbox.P2[0] << " " << bbox.P2[1] << " " << bbox.P2[2] << std::endl;
-        // std::cout << bbox.P3[0] << " " << bbox.P3[1] << " " << bbox.P3[2] << std::endl;
-        // std::cout << bbox.P4[0] << " " << bbox.P4[1] << " " << bbox.P4[2] << std::endl;
-        // std::cout << bbox.P5[0] << " " << bbox.P5[1] << " " << bbox.P5[2] << std::endl;
-        // std::cout << bbox.P6[0] << " " << bbox.P6[1] << " " << bbox.P6[2] << std::endl;
-        // std::cout << bbox.P7[0] << " " << bbox.P7[1] << " " << bbox.P7[2] << std::endl;
-        // std::cout << bbox.P8[0] << " " << bbox.P8[1] << " " << bbox.P8[2] << std::endl;
         drawable.transform->top_n = glm::cross(bbox.P3 - bbox.P7, bbox.P6 - bbox.P7);
         drawable.transform->bot_n = glm::cross(bbox.P5 - bbox.P8, bbox.P4 - bbox.P8);
         drawable.transform->top_stand = (angleBetween(up, drawable.transform->top_n) < deg_45_in_rad);
@@ -199,19 +143,26 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
         //     player.ground = drawable.transform;
         //     AttachToGround(drawable.transform);
         // }
+        else if (drawable.transform->name == "Vase") {          // SAVE TRANSFORMS FROM THE STARTD
+            vase_transform = drawable.transform;
+        }
 
         // --------------------------------------------------
         if (drawable.transform->name != "Player") {
             // std::cout << drawable.transform->name << ": ";
-            auto scale = drawable.transform->scale;
+            // auto scale = drawable.transform->scale;
+            // float radius = std::max(scale.x, scale.y) / 2;
+            // float half_height = scale.z / 2;
 
-            float radius = (std::max(scale.x, scale.y) + 0.25) / 2;
-            float half_height = scale.z / 2;
+            float diameter = std::max(std::abs(drawable.transform->bbox[5].x - drawable.transform->bbox[1].x), 
+                                      std::abs(drawable.transform->bbox[2].y - drawable.transform->bbox[1].y));
+            float radius = diameter / 2;
+            float height = std::abs(drawable.transform->bbox[5].z - drawable.transform->bbox[7].z);
 
             glm::vec3 tip  = drawable.transform->position;
             glm::vec3 base = drawable.transform->position;
-            tip.z  += half_height;
-            base.z -= half_height;
+            tip.z  += height;
+            // base.z -= half_height;
 
             objects.push_back(
                 RoomObject(drawable.transform->name, drawable.transform, drawable.transform->bbox, drawable.transform->position.z,
@@ -225,15 +176,13 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
 
     // std::cout << "\n***** Looping through objects ****" << std::endl;
     for (auto obj: objects) {
+        if (obj.name != "Vase") continue;
         std::cout << obj.name << " scale: " << glm::to_string(obj.transform->scale) << std::endl;
 
         std::cout << "Radius: " << obj.capsule.radius << std::endl;
         std::cout << "Tip: " << glm::to_string(obj.capsule.tip) << std::endl;
         std::cout << "Base: " << glm::to_string(obj.capsule.base) << std::endl;
-
-        std::cout << "" << std::endl;
     }
-
 
 
     auto player_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
@@ -259,6 +208,11 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
                                 [](const Scene::Drawable & elem) { return elem.transform->name == "Wall4"; });
     wall4 = (*wall4_iter).transform;
     scene.drawables.erase(wall4_iter);
+
+    auto floor_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [](const Scene::Drawable & elem) { return elem.transform->name == "Floor"; });
+    floor = (*floor_iter).transform;
+    // scene.drawables.erase(floor_iter);
 
     if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	player.camera = &scene.cameras.front();
@@ -337,7 +291,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             // face up, face down [TODO: let camera rotate up and down]
 			// float pitch = glm::pitch(player.camera->transform->rotation);
 			// pitch += motion.y * player.camera->fovy;
-			//camera looks down -z (basically at the player's feet) when pitch is at zero.
+			// // camera looks down -z (basically at the player's feet) when pitch is at zero.
 			// pitch = std::min(pitch, 0.95f * 3.1415926f);
 			// pitch = std::max(pitch, 0.05f * 3.1415926f);
 			// player.camera->transform->rotation = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -572,11 +526,91 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
 }
 
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
-bool capsule_capsule_collision() {
-    return true;
+bool capsule_capsule_collision(float a_radius, glm::vec3 a_tip, glm::vec3 a_base, 
+                               float b_radius, glm::vec3 b_tip, glm::vec3 b_base) {
+    // Capsule A
+    glm::vec3 a_Normal = glm::normalize(a_tip - a_base);
+    glm::vec3 a_LineEndOffset = a_Normal * a_radius;
+    glm::vec3 a_A = a_base + a_LineEndOffset;
+    glm::vec3 a_B = a_tip  - a_LineEndOffset;
+
+    // Capsule B
+    glm::vec3 b_Normal = glm::normalize(b_tip - b_base);
+    glm::vec3 b_LineEndOffset = b_Normal * b_radius;
+    glm::vec3 b_A = b_base + b_LineEndOffset;
+    glm::vec3 b_B = b_tip  - b_LineEndOffset;
+
+    // Vectors between line endpoints
+    glm::vec3 v0 = b_A - a_A;
+    glm::vec3 v1 = b_B - a_A; 
+    glm::vec3 v2 = b_A - a_B; 
+    glm::vec3 v3 = b_B - a_B;
+    // Squared distances
+    float d0 = glm::dot(v0, v0); 
+    float d1 = glm::dot(v1, v1); 
+    float d2 = glm::dot(v2, v2); 
+    float d3 = glm::dot(v3, v3);
+
+    // Select the best potential endpoint on capsule A:
+    glm::vec3 pot_endpoint;
+    if (d2 < d0 || d2 < d1 || d3 < d0 || d3 < d1) {
+        pot_endpoint = a_B;
+    } else {
+        pot_endpoint = a_A;
+    }
+
+    // Select point on capsule B line segment nearest to best potential endpoint on A capsule
+    glm::vec3 best_B = closest_point_on_line_segment(b_A, b_B, pot_endpoint);
+    glm::vec3 best_A = closest_point_on_line_segment(a_A, a_B, best_B); 
+
+    // Perform sphere intersection routine
+    glm::vec3 penetration_normal = best_A - best_B;
+    float len = glm::length(penetration_normal);
+    penetration_normal = glm::normalize(penetration_normal);
+    float penetration_depth = a_radius + b_radius - len;
+    
+    return (penetration_depth > 0);
 }
 
+std::string PlayMode::capsule_collide(RoomObject &current_obj) {
+    for (auto obj : objects) {
+        if (obj.name == "Rug") continue; // Rug is kinda blocky
+        if (obj.name == "Player") continue;
+        if (obj.name == "Facing") continue;
+        if (obj.name == "CatPlayer") continue;
+
+        // TODO uncomment this later, floor collisions are inevitable
+        // Set height to floor level when floor collision is detected?
+        if (obj.name == "Floor") continue;      
+        if (obj.name == current_obj.name) continue;
+
+        auto capsule = current_obj.capsule;
+
+        SurfaceType surface;
+        if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface)) {
+            std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << "\n" << std::endl;
+            return obj.name;
+        }
+    }
+    return "";
+}
+
+
 std::string PlayMode::collide() {
+    // for (auto obj : objects) {
+    //     if (obj.name == "Rug") continue; // Rug is kinda blocky
+    //     if (obj.name == "Player") continue;
+    //     if (obj.name == "Facing") continue;
+    //     if (obj.name == "CatPlayer") continue;
+
+    //     if (obj.name == "Floor") continue;      // TODO uncomment this later, seems like floor collisions are necessary
+
+    //     if (capsule_capsule_collision(player.radius, player.tip, player.base, obj.capsule.radius, obj.capsule.tip, obj.capsule.base)) {
+    //         std::cout << "\nCAPSULE COLLISION: " << obj.name << "\n" << std::endl;
+    //         return obj.name;
+    //     }
+    // }
+
     for (auto &drawable : scene.drawables) {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
         if (drawable.transform->name == "Player") continue;
@@ -606,28 +640,30 @@ std::string PlayMode::collide() {
         return wall4->name;
     }
 
+    // if (capsule_bbox_collision(player.tip, player.base, player.radius, floor->bbox, &surface)) {
+    //     return "Floor";
+    // }
+
     return "";
 }
 
 void PlayMode::update(float elapsed) {
     glm::vec3 prev_player_position = player.transform->position;
-    
+
 	//move player:
     //combine inputs into a move:
-    {
-        constexpr float ground_speed = 8.0f;
-        constexpr float air_speed = 5.0f;
-        glm::vec2 move = glm::vec2(0.0f);
-        if (left.pressed && !right.pressed) move.y = -1.0f;
-        if (!left.pressed && right.pressed) move.y = 1.0f;
-        if (down.pressed && !up.pressed) move.x = 1.0f;
-        if (!down.pressed && up.pressed) move.x = -1.0f;
-        if (!player.jumping && space.pressed)  {
-            player.jumping = true;
-        }
-        if (!player.swatting && swat.pressed) {
-            player.swatting = true;
-        }
+    constexpr float ground_speed = 8.0f;
+    constexpr float air_speed = 5.0f;
+    glm::vec2 move = glm::vec2(0.0f);
+    if (left.pressed && !right.pressed) move.y = -1.0f;
+    if (!left.pressed && right.pressed) move.y = 1.0f;
+    if (down.pressed && !up.pressed) move.x = 1.0f;
+    if (!down.pressed && up.pressed) move.x = -1.0f;
+    if (!player.jumping && space.pressed)  {
+        player.jumping = true;
+    }
+    if (!player.swatting && swat.pressed) {
+        player.swatting = true;
     }
 
     //make it so that moving diagonally doesn't go faster:
@@ -659,55 +695,59 @@ void PlayMode::update(float elapsed) {
 
         player.swatting = false;
     } 
-    if (object_collide_name == "Vase") {    // erase on swat
+    if (object_collide_name == "Vase") {
         std::cout << "+++++++ PUSHING Vase +++++++" << std::endl;
+        
+        vase_orig = vase_transform->position;       // ################# SAVE ORIGINAL VASE POSITION
 
         // Get vase object & move it
         auto obj_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                 [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
         auto obj = *(obj_iter);
-        obj.transform->position += (player.transform->position - prev_player_position);
+        glm::vec3 offset = (player.transform->position - prev_player_position);
+        obj.transform->position += offset;
         for (auto i = 0; i < 8; i++) {
-                obj.transform->bbox[i] += (player.transform->position - prev_player_position);
+            orig_vase_bbox[i] = obj.transform->bbox[i]; // Save original
+            obj.transform->bbox[i] += offset;  // Update to new
         }
 
-        // Get sidetable top object for table-item location detection
-        auto sidetable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "SideTable"; });
-        auto sidetable = *(sidetable_iter);
+        // ############## Test for collisions against other objects ##############
+        auto vase_obj_iter = find_if(objects.begin(), objects.end(),
+                                        [](const RoomObject & elem) { return elem.name == "Vase"; });
+        auto &vase_obj = *(vase_obj_iter);
 
-        // Check if vase fell off the edge of the table
-        // std::cout << "x: " << sidetable.transform->bbox[5].x << "," << sidetable.transform->bbox[1].x << std::endl;
-        // std::cout << "y: " << sidetable.transform->bbox[2].y << "," << sidetable.transform->bbox[1].y << std::endl;
-        // std::cout << "vase pos: " << glm::to_string(sidetable.transform->position) << std::endl;
+        if (capsule_collide(vase_obj) == "") {    // Move capsule in absence of collisions
+            // std::cout << "DIFF: " << glm::to_string((player.transform->position - prev_player_position)) << std::endl;
+            // std::cout << "Base before: " << glm::to_string(vase_obj.capsule.base);
+            vase_obj.capsule.tip = vase_obj.capsule.tip + offset;
+            vase_obj.capsule.base = vase_obj.capsule.base + offset;
+            // std::cout << "\tBase after: " << glm::to_string(vase_obj.capsule.base);
 
-        if (!vase_was_pushed &&
-            !((sidetable.transform->bbox[1].x <= obj.transform->position.x && obj.transform->position.x <= sidetable.transform->bbox[5].x)
-           && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
-            // std::cout << "VASE IS FALLING" << std::endl;
-            vase_is_falling = true;
-            vase_starting_height = obj.transform->position.z;
-            vase_transform = obj.transform;
+            // Get sidetable top object for table-item location detection
+            auto sidetable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                    [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "SideTable"; });
+            auto sidetable = *(sidetable_iter);
+
+            if (!vase_was_pushed &&
+                !((sidetable.transform->bbox[1].x <= obj.transform->position.x && obj.transform->position.x <= sidetable.transform->bbox[5].x)
+            && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
+                // std::cout << "VASE IS FALLING" << std::endl;
+                vase_is_falling = true;
+                vase_starting_height = obj.transform->position.z;
+                // vase_transform = obj.transform;                  -------> Moved this above
+                for (auto i = 0; i < 8; i++) {
+                    orig_vase_bbox[i].z = obj.transform->bbox[i].z;
+                }
+            }
+        }
+        else {  // Undo movement 
+            obj.transform->position = vase_orig;
             for (auto i = 0; i < 8; i++) {
-                orig_vase_bbox[i].z = obj.transform->bbox[i].z;
+                obj.transform->bbox[i] = orig_vase_bbox[i];
             }
         }
     } 
 
-
-    // else if (object_collide_name == "Vase" || object_collide_name == "Key") { //drawable.transform->name == "Key") {
-    //     std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
-
-    //     auto obj_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-    //                             [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
-        
-    //     auto obj = *(obj_iter);
-
-    //     obj.transform->position += (player.transform->position - prev_player_position);
-    //     for (auto i = 0; i < 8; i++) {
-    //             obj.transform->bbox[i] += (player.transform->position - prev_player_position);
-    //     }
-    // } 
     else if (object_collide_name != "") { // undo movement
         player.transform->position = prev_player_position;
         player.tip = prev_player_position;
@@ -717,22 +757,6 @@ void PlayMode::update(float elapsed) {
     }
 
     prev_player_position = player.transform->position;
-
-
-    // // handle jumping and gravity
-    // if (player.jumping) {
-    //     player.air_time += elapsed;
-    //     if (player.air_time > 2.0f) {
-    //         player.air_time = 0.f;
-    //         player.jumping = false;
-    //     } else {
-    //         player.transform->position.z += 5.0f * elapsed;
-    //     }
-    // }
-
-
-    //  // gravity
-    // player.transform->position.z -= 2.0f * elapsed;
 
     player.air_time += elapsed;
     if (player.jumping) { // jumping
@@ -783,6 +807,7 @@ void PlayMode::update(float elapsed) {
             } 
             score += 5;
             vase_was_pushed = true;  // prevents user from gaining more points
+            vase_done = true;
         }
         else {
             vase_transform->position.z = height;
@@ -791,123 +816,6 @@ void PlayMode::update(float elapsed) {
             }
         }
     }
-
-
-    // float player_starting_height = drawable.transform->bbox[5].z + 1.0f;
-    //             float height = player_starting_height + 0.5f * gravity * player.air_time * player.air_time;
-    //             std::cout << height << std::endl;
-    //             if (height <= player.ground_level) {
-    //                 player.transform->position.z = player.ground_level;
-    //                 player.on_table = false;
-    //                 player.air_time = 0.0f;
-    //             }
-    //             else {
-    //                 player.transform->position.z = height;
-    //             }
-
-
-
-    // // check for collisions:
-    // {
-    //     for (auto &drawable : scene.drawables) {
-    //         if (drawable.transform->name == "Floor") continue;
-    //         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
-    //         if (drawable.transform->name == "Player") continue;
-    //         if (drawable.transform->name == "Facing") continue;
-
-    //         SurfaceType surface;
-    //         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
-
-    //             if (player.swatting && drawable.transform->name == "Key") {    // erase on swat
-    //                 std::cout << "+++++++ SWATTING +++++++" << std::endl;
-
-    //                 // erase key on swat
-    //                 auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-    //                                         [&drawable](const Scene::Drawable & elem) { return &elem == &drawable; });
-    //                 scene.drawables.erase(key_iter);
-
-    //                 player.swatting = false;
-    //             }
-
-    //             if (drawable.transform->name == "Vase" || drawable.transform->name == "Key") { //drawable.transform->name == "Key") {
-    //                 std::cout << "$$$$$$ PUSHING $$$$$$" << std::endl;
-    //                 drawable.transform->position += (player.transform->position - prev_player_position);
-    //                 for (auto i = 0; i < 8; i++) {
-    //                      drawable.transform->bbox[i] += (player.transform->position - prev_player_position);
-    //                 }
-    //                 return;     // don't want to reset position
-    //             }
-                
-    //             if (drawable.transform->name == "Table.005" && surface == TOP) {
-    //                 if (!player.on_table) {
-    //                     std::cout << "now he is on the table" << std::endl;
-    //                     player.on_table = true;
-    //                 }
-    //             }
-
-    //             player.transform->position = prev_player_position;
-
-                // std::cout << drawable.transform->name << std::endl;
-                // switch (surface) {
-                //     case TOP: {
-                //         std::cout << "TOP" << std::endl;
-                //         break;
-                //     }
-                //     case BOT: {
-                //         std::cout << "BOT" << std::endl;
-                //         break;
-                //     }
-                //     case FRONT: {
-                //         std::cout << "FRONT" << std::endl;
-                //         break;
-                //     }
-                //     case BACK: {
-                //         std::cout << "BACK" << std::endl;
-                //         break;
-                //     }
-                //     case LEFT: {
-                //         std::cout << "LEFT" << std::endl;
-                //         break;
-                //     }
-                //     case RIGHT: {
-                //         std::cout << "RIGHT" << std::endl;
-                //         break;
-                //     }
-                // }
-            // }
-            // else {
-            //     if (drawable.transform->name == "Table.005" && player.on_table) {
-            //         if (!((drawable.transform->bbox[1].x <= player.transform->position.x && player.transform->position.x <= drawable.transform->bbox[5].x)
-            //            && (drawable.transform->bbox[1].y <= player.transform->position.y && player.transform->position.y <= drawable.transform->bbox[2].y))) {
-
-            //             std::cout << "*** WALK OFF TABLE, player position = " << glm::to_string(player.transform->position) << std::endl;
-                        
-            //             player.air_time += elapsed;
-            //             float player_starting_height = drawable.transform->bbox[5].z + 1.0f;
-            //             float height = player_starting_height + 0.5f * gravity * player.air_time * player.air_time;
-            //             std::cout << height << std::endl;
-            //             if (height <= player.ground_level) {
-            //                 player.transform->position.z = player.ground_level;
-            //                 player.on_table = false;
-            //                 player.air_time = 0.0f;
-            //             }
-            //             else {
-            //                 player.transform->position.z = height;
-            //             }
-            //         }
-            //         // player.transform->position.z = player.ground_level;
-            //     }
-            // }            
-    //     }
-    // }
-
-    // player.tip = player.transform->position;
-    // player.tip.z += 1.0f;
-    // player.base = player.transform->position;
-    // player.base.z -= 1.0f;
-
-
-
 
 	//reset button press counters:
 	left.downs = 0;
@@ -939,53 +847,98 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*player.camera);
 
-    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-    //     glDisable(GL_DEPTH_TEST);
-    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+        glDisable(GL_DEPTH_TEST);
+        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-    //     for (auto &drawable : scene.drawables) {
-    //         if (drawable.transform->name != "SideTable" && drawable.transform->name != "Vase") continue;
+        // for (auto obj : objects) {
+        //     if (obj.name != "Vase") continue;
+            auto vase_obj_iter = find_if(objects.begin(), objects.end(),
+                                            [](const RoomObject & elem) { return elem.name == "Vase"; });
+            auto obj = *(vase_obj_iter);
+            auto tip = obj.capsule.tip;
+            auto base = obj.capsule.base;
+            auto radius = obj.capsule.radius;
 
-    //         //top
-    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // tip
+            auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
+            auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
+            auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
+            auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
+            
+            draw_lines.draw(A, C, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(B, C, glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(A, D, glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
-    //         // bottom
-    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // base
+            auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
+            auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
+            auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
+            auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
+            
+            draw_lines.draw(E, G, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(F, G, glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(E, H, glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
-    //         // left
-    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // sides
+            draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+        // }
 
-    //         // right
-    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // for (auto &drawable : scene.drawables) {
+        //     if (drawable.transform->name != "SideTable") continue;
 
-    //         // front
-    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            
+        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-    //         // back
-    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
 
-    //     }
+        //     top
+        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-    // }
+        //     // bottom
+        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        //     // left
+        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        //     // right
+        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        //     // front
+        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        //     // back
+        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        // }
+
+    }
 
 	{ //use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);

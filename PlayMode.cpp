@@ -155,6 +155,9 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
             // float radius = std::max(scale.x, scale.y) / 2;
             // float half_height = scale.z / 2;
 
+            // ############### TODO: MOVE INITIALIZATION CONSTRUCTOR TO ROOMOBJECT CONSTRUCTOR
+            // ############### TODO: add a target height field for falling objects
+
             float diameter = std::max(std::abs(drawable.transform->bbox[5].x - drawable.transform->bbox[1].x), 
                                       std::abs(drawable.transform->bbox[2].y - drawable.transform->bbox[1].y));
             float radius = diameter / 2;
@@ -167,10 +170,14 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
 
             objects.push_back(
                 RoomObject(drawable.transform->name, drawable.transform, drawable.transform->bbox, drawable.transform->position.z,
-                           radius, tip, base, CollisionType::Swat)
+                           radius, height, tip, base, CollisionType::Swat)
             );
 
             // std::cout << "\t" << glm::to_string(drawable.transform->scale) << std::endl;
+            if (drawable.transform->name == "Rug") {
+                rug_height = tip.z;
+                std::cout << "---------- RUG HEIGHT: " << rug_height << "-----------" << std::endl;
+            }
         }
         // --------------------------------------------------
 	}
@@ -649,7 +656,7 @@ void PlayMode::update(float elapsed) {
 
 	//move player:
     //combine inputs into a move:
-    constexpr float ground_speed = 4.0f;
+    constexpr float ground_speed = 8.0f;
     constexpr float air_speed = 5.0f;
     glm::vec2 move = glm::vec2(0.0f);
     if (left.pressed && !right.pressed) move.y = -1.0f;
@@ -692,7 +699,7 @@ void PlayMode::update(float elapsed) {
 
         player.swatting = false;
     } 
-    if (object_collide_name == "Vase") {
+    if (object_collide_name == "Vase" && !vase_done) {
         std::cout << "+++++++ PUSHING Vase +++++++" << std::endl;
         
         vase_orig = vase_transform->position;       // ################# SAVE ORIGINAL VASE POSITION
@@ -716,18 +723,20 @@ void PlayMode::update(float elapsed) {
         if (capsule_collide(vase_obj, &vase_obj.pen_dir, &vase_obj.pen_depth) == "") {    // Move capsule in absence of collisions
             // std::cout << "DIFF: " << glm::to_string((player.transform->position - prev_player_position)) << std::endl;
             // std::cout << "Base before: " << glm::to_string(vase_obj.capsule.base);
-            vase_obj.capsule.tip = vase_obj.capsule.tip + offset;
-            vase_obj.capsule.base = vase_obj.capsule.base + offset;
+            vase_obj.capsule.tip = vase_obj.capsule.tip + (vase_transform->position - vase_orig);
+            vase_obj.capsule.base = vase_obj.capsule.base + (vase_transform->position - vase_orig);
             // std::cout << "\tBase after: " << glm::to_string(vase_obj.capsule.base);
 
             // ------- Get sidetable top object for table-item location detection --------
             auto sidetable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                     [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "SideTable"; });
             auto sidetable = *(sidetable_iter);
-
             if (!vase_was_pushed && 
-                !((sidetable.transform->bbox[1].x <= obj.transform->position.x && obj.transform->position.x <= sidetable.transform->bbox[5].x)
-               && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
+                !((sidetable.transform->bbox[1].x <= obj.transform->bbox[5].x && obj.transform->bbox[1].x <= sidetable.transform->bbox[5].x)
+                && (sidetable.transform->bbox[1].y <= obj.transform->bbox[2].y && obj.transform->bbox[1].y <= sidetable.transform->bbox[2].y))) {
+
+                // !((sidetable.transform->bbox[1].x <= obj.transform->position.x && obj.transform->position.x <= sidetable.transform->bbox[5].x)
+                // && (sidetable.transform->bbox[1].y <= obj.transform->position.y && obj.transform->position.y <= sidetable.transform->bbox[2].y))) {
                 vase_is_falling = true;
                 for (auto i = 0; i < 8; i++) {
                     orig_vase_bbox[i].z = obj.transform->bbox[i].z;
@@ -807,15 +816,20 @@ void PlayMode::update(float elapsed) {
     }
 
     // Handle vase falling off of table
-    if (vase_is_falling) {
-        std::cout << "pushing vase off..." << std::endl;
+    if (!vase_done && vase_is_falling) {
+        auto vase_obj_iter = find_if(objects.begin(), objects.end(),
+                                        [](const RoomObject & elem) { return elem.name == "Vase"; });
+        auto &vase_obj = *(vase_obj_iter);
 
         vase_air_time += elapsed;
 
         float height = vase_starting_height + 0.5f * gravity * vase_air_time * vase_air_time;
-        std::cout << height << std::endl;
-        if (height <= 1.0f) {
-            vase_transform->position.z = 1.0f;
+        if (height <= rug_height) {
+
+            vase_transform->position.z = rug_height;
+            vase_obj.capsule.base.z = rug_height;
+            vase_obj.capsule.tip.z = rug_height + vase_obj.capsule.height;
+
             vase_is_falling = false;
             vase_air_time = 0.0f;
 
@@ -824,7 +838,7 @@ void PlayMode::update(float elapsed) {
             // for (auto i = 0; i < 8; i++) {
             //     vase_transform->bbox[i].z += margin;
             // }
-            float diff = vase_starting_height - 1.0f;
+            float diff = vase_starting_height - rug_height;
             for (auto i = 0; i < 8; i++) {
                 vase_transform->bbox[i].z = orig_vase_bbox[i].z - diff;
             } 
@@ -834,6 +848,8 @@ void PlayMode::update(float elapsed) {
         }
         else {
             vase_transform->position.z = height;
+            vase_obj.capsule.base.z = height;
+            vase_obj.capsule.tip.z = height + vase_obj.capsule.height;
             for (auto i = 0; i < 8; i++) {      // Don't forget to update vase bbox
                 vase_transform->bbox[i].z = 0.5f * gravity * vase_air_time * vase_air_time;
             }
@@ -917,54 +933,54 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
             // -------- penetration vector --------
         // }
 
-        // for (auto &drawable : scene.drawables) {
-        //     if (drawable.transform->name != "SideTable") continue;
+        for (auto &drawable : scene.drawables) {
+            if (drawable.transform->name != "Vase" && drawable.transform->name != "SideTable") continue;
 
             
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
 
-        //     top
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // top
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // bottom
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // bottom
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // left
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // left
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // right
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // // right
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // front
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // front
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // back
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // back
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        // }
+        }
 
     }
 

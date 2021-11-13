@@ -19,11 +19,11 @@ typedef enum CollisionType_t {
 	PushOff = 2,
 } CollisionType;
 
-
+const float DIST_EPS = 0.01f;
 class RoomObject {
 	public:
 		RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], float starting_height_, 
-				float radius_, glm::vec3 tip_, glm::vec3 base_,
+				float radius_, float height_, glm::vec3 tip_, glm::vec3 base_,
 				CollisionType collision_type_) : 
 			name(name_), transform(transform_), starting_height(starting_height_), 
 			/*radius(radius_), tip(tip_), base(base_),*/ collision_type(collision_type_) {
@@ -33,6 +33,7 @@ class RoomObject {
 			}
 
 			this->capsule.radius = radius_;
+			this->capsule.height = height_;
 			this->capsule.tip 	 = tip_;
 			this->capsule.base 	 = base_;
 		}
@@ -45,7 +46,8 @@ class RoomObject {
 
 		// ----- Capsule properties -----
 		struct Capsule {
-			float radius = 0.5f; // default
+			float radius = 0.5f;
+			float height = 1.0f;
 			glm::vec3 tip;		 // tip position
 			glm::vec3 base; 	 // base position
 		};
@@ -132,5 +134,6 @@ struct PlayMode : Mode {
 	glm::vec3 vase_orig = glm::vec3(0);
 
     Scene::Transform *wall1, *wall2, *wall3, *wall4, *floor;
+	float rug_height = 0.0f;
 
 };

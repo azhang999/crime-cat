@@ -140,6 +140,7 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
     vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
 
 
+
     {
         auto player_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                 [](const Scene::Drawable & elem) { return elem.transform->name == "Player"; });
@@ -368,20 +369,26 @@ void PlayMode::update(float elapsed) {
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
     RoomObject &collision_obj = *(collision_obj_iter);
 
-    if (player.swatting && object_collide_name == "Key") {    // erase on swat
-        std::cout << "+++++++ SWATTING Key +++++++" << std::endl;
+    if (player.swatting && collision_obj.collision_type == CollisionType::Swat && !collision_obj.done) {
+        auto col_drawable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
+        
+        if (col_drawable_iter != scene.drawables.end()) {
+            scene.drawables.erase(col_drawable_iter);
+        }
+        else {
+            std::cout << object_collide_name << " does not exist as a drawable" << std::endl;
+        }
+        collision_obj.done = true;
 
-        // erase key on swat
-        auto key_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "Key"; });
-        scene.drawables.erase(key_iter);
+        // Also erase object itself
+        objects.erase(collision_obj_iter);
 
         score += 3;
 
         player.swatting = false;
     } 
-    
-    if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
+    else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
         // Save object's original position
         collision_obj.prev_position = collision_obj.transform->position;
 
@@ -430,7 +437,6 @@ void PlayMode::update(float elapsed) {
             }
         }
     }
-
     else if (object_collide_name != "") { // undo movement
         player.transform->position = prev_player_position;
         player.tip = prev_player_position;
@@ -551,50 +557,45 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
         // for (auto obj : objects) {
-        //     if (obj.name != "Vase") continue;
-            // auto vase_obj_iter = find_if(objects.begin(), objects.end(),
-            //                                 [](const RoomObject & elem) { return elem.name == "Vase"; });
-            // auto obj = *(vase_obj_iter);
-            // auto tip = obj.capsule.tip;
-            // auto base = obj.capsule.base;
-            // auto radius = obj.capsule.radius;
+            // if (obj.name != "Key") continue;
+            auto vase_obj_iter = find_if(objects.begin(), objects.end(),
+                                            [](const RoomObject & elem) { return elem.name == "Key"; });
+            auto obj = *(vase_obj_iter);
+            auto tip = obj.capsule.tip;
+            auto base = obj.capsule.base;
+            auto radius = obj.capsule.radius;
 
-            // // std::cout << "Penetration direction: " << glm::to_string(obj.pen_dir) << ", depth: " << obj.pen_depth << std::endl;
-
-            // // tip
-            // auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
-            // auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
-            // auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
-            // auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
+            // tip
+            auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
+            auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
+            auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
+            auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
             
-            // draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-            // // base
-            // auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
-            // auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
-            // auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
-            // auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
+            // base
+            auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
+            auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
+            auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
+            auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
             
-            // draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-            // // sides
-            // draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-
-
-            // -------- penetration vector --------
+            // sides
+            draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
         // }
 
         for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name != "Vase" && drawable.transform->name != "SideTable") continue;
+            if (drawable.transform->name != "Key") continue;
 
             
             // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));

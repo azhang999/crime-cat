@@ -48,19 +48,19 @@ class RoomObject {
 	
 		// ----- Collision detection properties -----
 		CollisionType collision_type = None;
-		bool collided = false;					 // vase_was_pushed
-		bool done = false;						 // vase_done
+		bool collided = false;
+		bool done = false;
 		glm::vec3 pen_dir = glm::vec3(0);
 		float pen_depth = 0.f;
 	
 		// ----- Collision resolution -----
-		glm::vec3 prev_position;	 			 // vase_orig
+		glm::vec3 prev_position;
 
 		// ***** Falling objects *****
-		bool is_falling = false;				 // vase_is_falling
-		float air_time = 0.0f;					 // vase_air_time
-		float start_height = 0.0f;				 // vase_starting_height
-		float end_height   = 0.0f;				 // rug_height
+		bool is_falling = false;
+		float air_time = 0.0f;
+		float start_height = 0.0f;
+		float end_height   = 0.0f;
 		float x_min = 0, x_max = 0, y_min = 0, y_max = 0;
 
 };

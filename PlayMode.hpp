@@ -2,6 +2,8 @@
 
 #include "Scene.hpp"
 #include "Sound.hpp"
+#include "Mesh.hpp"
+#include "Load.hpp"
 
 #include <glm/glm.hpp>
 
@@ -19,7 +21,7 @@ struct PlayMode : Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
-    void AttachToGround(Scene::Transform *transform);
+    void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
     std::string collide();
 
@@ -32,7 +34,12 @@ struct PlayMode : Mode {
 	} left, right, down, up, space, swat;
 
 	//local copy of the game scene (so code can change it during gameplay):
-	Scene scene;
+	Scene player_scene;
+    Scene living_room_scene;
+    Scene kitchen_scene;
+
+    //entire scene
+    //Scene full_scene;
 
     float gravity = -15.0f;
 

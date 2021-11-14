@@ -118,8 +118,11 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
             // For collection COLLISION objects, set CollisionType 
             // ######################################################
             CollisionType type = CollisionType::None;
-            if (drawable.transform->name == "Vase" || drawable.transform->name == "Mug") type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")                                  type = CollisionType::Swat;
+            // if (drawable.transform->name == "Vase" || drawable.transform->name == "Mug") type = CollisionType::PushOff;
+            
+            if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
+            else if (drawable.transform->name == "Key")  type = CollisionType::Swat;
+            else if (drawable.transform->name == "Mug")  type = CollisionType::KnockOver;
 
             objects.push_back( RoomObject(drawable.transform->name, drawable.transform, drawable.transform->bbox, type, radius, height, tip, base));
 
@@ -638,6 +641,10 @@ void PlayMode::update(float elapsed) {
         player.base.z -= 1.0f;
     }
 
+    // #####################################################################
+    //                          Handle Collisions
+    // #####################################################################
+
     // RoomObject collision_obj;
     // std::string object_collide_name = collide(&collision_obj);
     std::string object_collide_name = collide();
@@ -658,7 +665,8 @@ void PlayMode::update(float elapsed) {
 
         player.swatting = false;
     } 
-    if (object_collide_name == "Vase" && !collision_obj.done) {
+    
+    if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
         // Save object's original position
         collision_obj.prev_position = collision_obj.transform->position;
 
@@ -706,7 +714,7 @@ void PlayMode::update(float elapsed) {
                 collision_obj.capsule.base += displacement;
             }
         }
-    } 
+    }
 
     else if (object_collide_name != "") { // undo movement
         player.transform->position = prev_player_position;
@@ -716,54 +724,53 @@ void PlayMode::update(float elapsed) {
         player.base.z -= 1.0f;
     }
 
-    // Handle vase falling off of table
-    auto vase_obj_iter = find_if(objects.begin(), objects.end(),
-                                        [](const RoomObject & elem) { return elem.name == "Vase"; });
-    auto &vase_obj = *(vase_obj_iter);
+    // ##################### Resolve remaining collision behavior #####################
+    for (auto &obj : objects) {
+        if (obj.collision_type == CollisionType::PushOff) {
+            if (!obj.done && obj.is_falling) {
 
-    if (!vase_obj.done && vase_obj.is_falling) {
+                obj.air_time += elapsed;
 
-        vase_obj.air_time += elapsed;
+                float height = obj.start_height + 0.5f * gravity * obj.air_time * obj.air_time;
+                if (height <= obj.end_height) {
 
-        float height = vase_obj.start_height + 0.5f * gravity * vase_obj.air_time * vase_obj.air_time;
-        if (height <= vase_obj.end_height) {
+                    obj.transform->position.z = obj.end_height;
+                    obj.capsule.base.z = obj.end_height;
+                    obj.capsule.tip.z = obj.end_height + obj.capsule.height;
 
-            vase_obj.transform->position.z = vase_obj.end_height;
-            vase_obj.capsule.base.z = vase_obj.end_height;
-            vase_obj.capsule.tip.z = vase_obj.end_height + vase_obj.capsule.height;
+                    obj.is_falling = false;
+                    obj.air_time = 0.0f;
 
-            vase_obj.is_falling = false;
-            vase_obj.air_time = 0.0f;
+                    obj.transform->bbox[5].z = obj.end_height + obj.capsule.height;
+                    obj.transform->bbox[1].z = obj.end_height + obj.capsule.height;
+                    obj.transform->bbox[2].z = obj.end_height + obj.capsule.height;
+                    obj.transform->bbox[6].z = obj.end_height + obj.capsule.height;
+                    obj.transform->bbox[0].z = obj.end_height;
+                    obj.transform->bbox[3].z = obj.end_height;
+                    obj.transform->bbox[4].z = obj.end_height;
+                    obj.transform->bbox[7].z = obj.end_height;
 
-            vase_obj.transform->bbox[5].z = vase_obj.end_height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[1].z = vase_obj.end_height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[2].z = vase_obj.end_height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[6].z = vase_obj.end_height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[0].z = vase_obj.end_height;
-            vase_obj.transform->bbox[3].z = vase_obj.end_height;
-            vase_obj.transform->bbox[4].z = vase_obj.end_height;
-            vase_obj.transform->bbox[7].z = vase_obj.end_height;
+                    score += 5;
+                    obj.collided = true;  // prevents user from gaining more points
+                    obj.done = true;
+                }
+                else {
+                    obj.transform->position.z = height;
+                    obj.capsule.base.z = height;
+                    obj.capsule.tip.z = height + obj.capsule.height;
 
-            score += 5;
-            vase_obj.collided = true;  // prevents user from gaining more points
-            vase_obj.done = true;
-        }
-        else {
-            vase_obj.transform->position.z = height;
-            vase_obj.capsule.base.z = height;
-            vase_obj.capsule.tip.z = height + vase_obj.capsule.height;
-
-            vase_obj.transform->bbox[5].z = height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[1].z = height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[2].z = height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[6].z = height + vase_obj.capsule.height;
-            vase_obj.transform->bbox[0].z = height;
-            vase_obj.transform->bbox[3].z = height;
-            vase_obj.transform->bbox[4].z = height;
-            vase_obj.transform->bbox[7].z = height;
+                    obj.transform->bbox[5].z = height + obj.capsule.height;
+                    obj.transform->bbox[1].z = height + obj.capsule.height;
+                    obj.transform->bbox[2].z = height + obj.capsule.height;
+                    obj.transform->bbox[6].z = height + obj.capsule.height;
+                    obj.transform->bbox[0].z = height;
+                    obj.transform->bbox[3].z = height;
+                    obj.transform->bbox[4].z = height;
+                    obj.transform->bbox[7].z = height;
+                }
+            }
         }
     }
-
 
     // ######################### Resolve falling player #########################
 

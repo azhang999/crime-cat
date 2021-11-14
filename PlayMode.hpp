@@ -2,74 +2,14 @@
 
 #include "Scene.hpp"
 #include "Sound.hpp"
+#include "RoomObject.hpp"
+#include "Collision.hpp"
 
 #include <glm/glm.hpp>
 
 #include <vector>
 #include <deque>
 #include <iostream>
-
-
-enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
-
-enum CollisionType {
-	None,
-	Swat,
-	KnockOver,
-	PushOff,
-};
-
-const float DIST_EPS = 0.01f;
-class RoomObject {
-	public:
-		RoomObject() {};		// empty for when we just want to save a reference
-
-		RoomObject(std::string name_, Scene::Transform *transform_, glm::vec3 orig_bbox_[8], CollisionType collision_type_, 
-				float radius_, float height_, glm::vec3 tip_, glm::vec3 base_) : 
-			name(name_), transform(transform_), collision_type(collision_type_) {
-			
-			for (auto i = 0; i < 8; i++) {
-				this->orig_bbox[i] = orig_bbox_[i];
-			}
-
-			this->capsule.radius = radius_;
-			this->capsule.height = height_;
-			this->capsule.tip 	 = tip_;
-			this->capsule.base 	 = base_;
-		}
-
-		// ----- Transform properties -----
-		std::string name;
-		Scene::Transform *transform = nullptr;
-		glm::vec3 orig_bbox[8];
-
-		// ----- Capsule properties -----
-		struct Capsule {
-			float radius = 0.5f;
-			float height = 1.0f;
-			glm::vec3 tip;		 // tip position
-			glm::vec3 base; 	 // base position
-		};
-		Capsule capsule;
-	
-		// ----- Collision detection properties -----
-		CollisionType collision_type = None;
-		bool collided = false;					 // vase_was_pushed
-		bool done = false;						 // vase_done
-		glm::vec3 pen_dir;
-		float pen_depth;
-	
-		// ----- Collision resolution -----
-		glm::vec3 prev_position;	 			 // vase_orig
-
-		// ***** Falling objects *****
-		bool is_falling = false;				 // vase_is_falling
-		float air_time = 0.0f;					 // vase_air_time
-		float start_height = 0.0f;				 // vase_starting_height
-		float end_height   = 0.0f;				 // rug_height
-		float x_min = 0, x_max = 0, y_min = 0, y_max = 0;
-
-};
 
 
 struct PlayMode : Mode {

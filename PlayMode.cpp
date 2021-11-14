@@ -50,6 +50,7 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 PlayMode::PlayMode() : scene(*living_room_scene) {
     // Save target heights for falling objects
     float rug_height = 0.0f;
+    float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
 
     for (auto &drawable : scene.drawables) {
         BoundBox const &bbox = living_room_meshes->lookup_bound_box(drawable.transform->name);
@@ -123,6 +124,12 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
             objects.push_back( RoomObject(drawable.transform->name, drawable.transform, drawable.transform->bbox, type, radius, height, tip, base));
 
             if (drawable.transform->name == "Rug") rug_height = tip.z;
+            if (drawable.transform->name == "SideTable") {
+                sidetable_x_min = drawable.transform->bbox[1].x;
+                sidetable_x_max = drawable.transform->bbox[5].x;
+                sidetable_y_min = drawable.transform->bbox[1].y;
+                sidetable_y_max = drawable.transform->bbox[2].y;
+            }
         }
 	}
 
@@ -135,19 +142,10 @@ PlayMode::PlayMode() : scene(*living_room_scene) {
     RoomObject &vase_obj = *(vase_iter);
     vase_obj.start_height = vase_obj.transform->position.z;
     vase_obj.end_height   = rug_height;
-    std::cout << "Start height: " << vase_obj.start_height << std::endl;
-    std::cout << "End height: " << vase_obj.end_height << std::endl;
+    vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
+    vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
 
 
-    // std::cout << "\n***** Looping through objects ****" << std::endl;
-    // for (auto obj: objects) {
-    //     if (!(obj.name->)) continue;
-    //     std::cout << obj.name << " scale: " << glm::to_string(obj.transform->scale) << std::endl;
-
-    //     std::cout << "Radius: " << obj.capsule.radius << std::endl;
-    //     std::cout << "Tip: " << glm::to_string(obj.capsule.tip) << std::endl;
-    //     std::cout << "Base: " << glm::to_string(obj.capsule.base) << std::endl;
-    // }
     {
         auto player_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                 [](const Scene::Drawable & elem) { return elem.transform->name == "Player"; });
@@ -580,6 +578,7 @@ std::string PlayMode::collide() {
         if (obj.name == "CatPlayer") continue;
 
         if (capsule_bbox_collision(player.tip, player.base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+            // *collided_object = obj;
             return obj.transform->name;
         }
     }
@@ -639,6 +638,7 @@ void PlayMode::update(float elapsed) {
         player.base.z -= 1.0f;
     }
 
+    // RoomObject collision_obj;
     // std::string object_collide_name = collide(&collision_obj);
     std::string object_collide_name = collide();
 
@@ -664,16 +664,10 @@ void PlayMode::update(float elapsed) {
 
         // Calculate player's displacement in this timestep
         glm::vec3 offset = (player.transform->position - prev_player_position);
-
-        // Get object's actual drawable and move it
-        auto obj_drawable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                        [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
-        auto &obj_drawable = *(obj_drawable_iter);
-
-        obj_drawable.transform->position += offset;
+        collision_obj.transform->position += offset;
         for (auto i = 0; i < 8; i++) {
-            collision_obj.orig_bbox[i] = obj_drawable.transform->bbox[i]; // Save original BBOX position
-            obj_drawable.transform->bbox[i] += offset;                    // Update to new
+            collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i]; // Save original BBOX position
+            collision_obj.transform->bbox[i] += offset;                    // Update to new
         }
 
         // ############## Test for collisions against other objects ##############
@@ -681,14 +675,9 @@ void PlayMode::update(float elapsed) {
             collision_obj.capsule.tip  = collision_obj.capsule.tip  + (collision_obj.transform->position - collision_obj.prev_position);
             collision_obj.capsule.base = collision_obj.capsule.base + (collision_obj.transform->position - collision_obj.prev_position);
 
-            // ------- Get sidetable top object for table-item location detection --------
-            auto sidetable_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
-                                    [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == "SideTable"; });
-            auto sidetable = *(sidetable_iter);
-
             if (!collision_obj.collided && 
-                !((sidetable.transform->bbox[1].x <= obj_drawable.transform->bbox[5].x && obj_drawable.transform->bbox[1].x <= sidetable.transform->bbox[5].x)
-                && (sidetable.transform->bbox[1].y <= obj_drawable.transform->bbox[2].y && obj_drawable.transform->bbox[1].y <= sidetable.transform->bbox[2].y))) {
+                !((collision_obj.x_min <= collision_obj.transform->bbox[5].x && collision_obj.transform->bbox[1].x <= collision_obj.x_max)
+                && (collision_obj.y_min <= collision_obj.transform->bbox[2].y && collision_obj.transform->bbox[1].y <= collision_obj.y_max))) {
                 collision_obj.is_falling = true;
             }
         }
@@ -698,8 +687,6 @@ void PlayMode::update(float elapsed) {
             glm::vec3 obj_velocity = offset / elapsed; //(collision_obj.transform->position - collision_obj.prev_position) / elapsed;
             float obj_velocity_length = glm::length(obj_velocity);
 
-            std::cout << "MOVEMENT VELOCITY: " << glm::to_string(obj_velocity) << ", normalized = " << glm::to_string(glm::normalize(obj_velocity)) << ", length = " << obj_velocity_length << std::endl;
-
             obj_velocity = glm::normalize(obj_velocity);
 
             if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
@@ -708,20 +695,12 @@ void PlayMode::update(float elapsed) {
                 glm::vec3 undesired_motion = collision_obj.pen_dir * glm::dot(collision_obj.pen_dir, obj_velocity);
                 glm::vec3 desired_motion = obj_velocity - undesired_motion;
                 obj_velocity = obj_velocity_length * desired_motion;
-                std::cout << "DESIRED MOTION: " << glm::to_string(desired_motion) << std::endl;
-                std::cout << "REVISED VELOCITY: " << glm::to_string(obj_velocity) << std::endl;
-
-                // Undo movement 
-                // obj_drawable.transform->position = vase_orig;
-                // for (auto i = 0; i < 8; i++) {
-                //     obj_drawable.transform->bbox[i] = orig_vase_bbox[i];
-                // }
 
                 // Re-do object movement with displacement vector calculated using this new velocity
                 glm::vec3 displacement = obj_velocity * elapsed;
-                obj_drawable.transform->position = collision_obj.prev_position + displacement;
+                collision_obj.transform->position = collision_obj.prev_position + displacement;
                 for (auto i = 0; i < 8; i++) {
-                    obj_drawable.transform->bbox[i] = collision_obj.orig_bbox[i] + displacement;
+                    collision_obj.transform->bbox[i] = collision_obj.orig_bbox[i] + displacement;
                 }
                 collision_obj.capsule.tip  += displacement;
                 collision_obj.capsule.base += displacement;
@@ -756,18 +735,10 @@ void PlayMode::update(float elapsed) {
             vase_obj.is_falling = false;
             vase_obj.air_time = 0.0f;
 
-            // float diff = vase_obj.start_height - vase_obj.end_height;
-            // std::cout << "DIFF = " << diff << std::endl;
-            // std::cout << "current bottom: " << vase_obj.transform->bbox[5].z << ", top: " << vase_obj.transform->bbox[0].z << std::endl;
-            // for (auto i = 0; i < 8; i++) {
-            //     vase_obj.transform->bbox[i].z = vase_obj.orig_bbox[i].z - diff;
-            // }
-            // std::cout << "updated bottom: " << vase_obj.transform->bbox[5].z << ", top: " << vase_obj.transform->bbox[0].z << std::endl;
             vase_obj.transform->bbox[5].z = vase_obj.end_height + vase_obj.capsule.height;
             vase_obj.transform->bbox[1].z = vase_obj.end_height + vase_obj.capsule.height;
             vase_obj.transform->bbox[2].z = vase_obj.end_height + vase_obj.capsule.height;
             vase_obj.transform->bbox[6].z = vase_obj.end_height + vase_obj.capsule.height;
-
             vase_obj.transform->bbox[0].z = vase_obj.end_height;
             vase_obj.transform->bbox[3].z = vase_obj.end_height;
             vase_obj.transform->bbox[4].z = vase_obj.end_height;
@@ -782,15 +753,10 @@ void PlayMode::update(float elapsed) {
             vase_obj.capsule.base.z = height;
             vase_obj.capsule.tip.z = height + vase_obj.capsule.height;
 
-            // for (auto i = 0; i < 8; i++) {      // Don't forget to update vase bbox
-            //     // std::cout << "new z: " << (0.5f * gravity * vase_obj.air_time * vase_obj.air_time) << std::endl;
-            //     vase_obj.transform->bbox[i].z = height; //0.5f * gravity * vase_obj.air_time * vase_obj.air_time;
-            // }
             vase_obj.transform->bbox[5].z = height + vase_obj.capsule.height;
             vase_obj.transform->bbox[1].z = height + vase_obj.capsule.height;
             vase_obj.transform->bbox[2].z = height + vase_obj.capsule.height;
             vase_obj.transform->bbox[6].z = height + vase_obj.capsule.height;
-
             vase_obj.transform->bbox[0].z = height;
             vase_obj.transform->bbox[3].z = height;
             vase_obj.transform->bbox[4].z = height;
@@ -815,6 +781,7 @@ void PlayMode::update(float elapsed) {
     player.base = player.transform->position;
     player.base.z -= 1.0f;
 
+    // object_collide_name = collide(&collision_obj);
     object_collide_name = collide();
     if (object_collide_name != "") {
         player.transform->position = prev_player_position;

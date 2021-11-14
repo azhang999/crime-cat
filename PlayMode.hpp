@@ -60,12 +60,15 @@ class RoomObject {
 		float pen_depth;
 	
 		// ----- Collision resolution -----
-		// helpful for time-variability
+		glm::vec3 prev_position;	 			 // vase_orig
+
+		// ***** Falling objects *****
 		bool is_falling = false;				 // vase_is_falling
 		float air_time = 0.0f;					 // vase_air_time
-		glm::vec3 prev_position;	 			 // vase_orig
 		float start_height = 0.0f;				 // vase_starting_height
 		float end_height   = 0.0f;				 // rug_height
+		float x_min = 0, x_max = 0, y_min = 0, y_max = 0;
+
 };
 
 
@@ -125,18 +128,6 @@ struct PlayMode : Mode {
 	std::vector<RoomObject> objects;
 
 	int score = 0;
-
-	// Scene::Transform *vase_transform = nullptr;
-	// bool vase_is_falling = false;
-	// float vase_air_time = 0.0f;
-	// float vase_starting_height;
-	// glm::vec3 orig_vase_bbox[8];
-
-	// bool vase_was_pushed = false;		
-
-	// bool vase_done = false;
-	// glm::vec3 vase_orig = glm::vec3(0);
-	// float rug_height = 0.0f;
 
     Scene::Transform *wall1, *wall2, *wall3, *wall4;
 };

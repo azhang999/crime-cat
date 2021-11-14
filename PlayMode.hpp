@@ -65,7 +65,7 @@ struct PlayMode : Mode {
 	int score = 0;
 
 	float theta = 0;
-	float phi = M_PI/2;
+	float phi = ((float)M_PI)/2.f;
 	float camera_radius = 10.0f;
 
 	Scene::Transform *vase_transform = nullptr;

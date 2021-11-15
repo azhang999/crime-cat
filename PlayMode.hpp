@@ -38,7 +38,7 @@ struct PlayMode : Mode {
 	// void check_room();
 	// std::string floor_collide(); //RoomType floor_collide();
 
-    std::string collide();
+    Scene::Transform *collide();
 	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
 
 	//----- game state -----
@@ -55,7 +55,7 @@ struct PlayMode : Mode {
 	std::vector<RoomObject> *current_objects = nullptr;
 
 	//local copy of the game scene (so code can change it during gameplay):
-	Scene player_scene;
+	Scene cat_scene;
     Scene living_room_scene;
     Scene kitchen_scene;
 
@@ -90,6 +90,7 @@ struct PlayMode : Mode {
         float air_time = 0.0f;
         bool jumping = false;
 		bool swatting = false;
+        float swatting_timer = 0.f;
 		bool on_table = false;
 
         float starting_height;
@@ -98,6 +99,19 @@ struct PlayMode : Mode {
         // SurfaceType surface = TOP;
         // float ground_level = 0.f;
 	} player;
+
+    glm::vec3 penetration_normal;
+    float penetration_depth;
+
+    struct Animation {
+        std::vector<Scene::Drawable> frames;
+        std::vector<float> frame_times;
+        uint32_t frame_idx = 0;
+        float timer = 0.f;
+        std::string name;
+
+        void animate(Scene &scene, bool enable, float elapsed);
+    } player_walking, player_up_jump, player_down_jump, player_swat;
 
 	int score = 0;
 	float theta = 0;

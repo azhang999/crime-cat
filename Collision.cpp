@@ -177,18 +177,85 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     return sphere_triangle_collision(center, radius, p0, p1, p2, pen_normal, pen_depth);
 }
 
+bool is_almost_up_vec(glm::vec3 &v) {
+    glm::vec3 n_v = glm::normalize(v);
+
+    float epsilon = 0.01f;
+    if (n_v.x >= epsilon || n_v.x <= -epsilon) {
+        return false;
+    }
+
+    if (n_v.y >= epsilon || n_v.y <= -epsilon) {
+        return false;
+    }
+
+    if (n_v.z >= epsilon + 1.0f || n_v.z <= -epsilon - 1.0f) {
+        return false;
+    }
+
+    return true;
+}
+
 bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius, 
                                 glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, 
                                 glm::vec3 *pen_normal, float *pen_depth) {
-    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1, pen_normal, pen_depth)) {
-        return true;
-    }
 
-    return capsule_triangle_collision(tip, base, radius, p2, p1, p3, pen_normal, pen_depth);
+    glm::vec3 pen_normal1; float pen_depth1;
+    glm::vec3 pen_normal2; float pen_depth2;
+    bool collide1 = capsule_triangle_collision(tip, base, radius, p0, p3, p1, &pen_normal1, &pen_depth1);
+    bool collide2 = capsule_triangle_collision(tip, base, radius, p2, p1, p3, &pen_normal2, &pen_depth2);
+
+    if (collide1 && collide2) {
+        bool use_up1 = is_almost_up_vec(pen_normal1);
+        if (use_up1) {
+            *pen_normal = pen_normal1;
+        } else {
+            *pen_normal = pen_normal2;
+        }
+    } else if (collide1) {
+        *pen_normal = pen_normal1;
+    } else if (collide2) {
+        *pen_normal = pen_normal2;
+    }
+    return collide1 || collide2;
 }
 
 bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, 
                                 SurfaceType *surface, glm::vec3 *pen_normal, float *pen_depth) {
+    
+    // first check the standable surface
+    // if (standing_surface == TOP) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2], pen_normal, pen_depth)) {
+    //         *surface = TOP;
+    //         return true;
+    //     }
+    // } else if (standing_surface == BOT) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0], pen_normal, pen_depth)) {
+    //         *surface = BOT;
+    //         return true;
+    //     }
+    // } else if (standing_surface == LEFT) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7], pen_normal, pen_depth)) {
+    //         *surface = LEFT;
+    //         return true;
+    //     }
+    // } else if (standing_surface == RIGHT) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0], pen_normal, pen_depth)) {
+    //         *surface = RIGHT;
+    //         return true;
+    //     }
+    // } else if (standing_surface == FRONT) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3], pen_normal, pen_depth)) {
+    //         *surface = FRONT;
+    //         return true;
+    //     }
+    // } else if (standing_surface == BACK) {
+    //     if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4], pen_normal, pen_depth)) {
+    //         *surface = BACK;
+    //         return true;
+    //     }
+    // }
+    
     // top
     if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2], pen_normal, pen_depth)) {
         *surface = TOP;

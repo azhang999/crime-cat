@@ -14,7 +14,7 @@
 #include <iostream>
 
 glm::vec3 closest_point_on_line_segment(glm::vec3 A, glm::vec3 B, glm::vec3 Point);
-
+bool is_almost_up_vec(glm::vec3 &v);
 bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2,
                                 glm::vec3 *pen_normal, float *pen_depth);
 

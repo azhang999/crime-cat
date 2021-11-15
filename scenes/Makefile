@@ -17,9 +17,9 @@ EXPORT_BOUNDBOX=export-boundbox.py
 DIST=../dist
 
 all : \
-	$(DIST)/player.pnct \
-	$(DIST)/player.scene \
-	$(DIST)/player.boundbox \
+	$(DIST)/cat.pnct \
+	$(DIST)/cat.scene \
+	$(DIST)/cat.boundbox \
 	$(DIST)/living_room.pnct \
 	$(DIST)/living_room.scene \
 	$(DIST)/living_room.boundbox \
@@ -27,13 +27,13 @@ all : \
 	$(DIST)/kitchen.scene \
 	$(DIST)/kitchen.boundbox \
 
-$(DIST)/player.scene : living_room.blend $(EXPORT_SCENE)
+$(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
 
-$(DIST)/player.pnct : living_room.blend $(EXPORT_MESHES)
+$(DIST)/cat.pnct : cat.blend $(EXPORT_MESHES)
 	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Player '$@'
 
-$(DIST)/player.boundbox : living_room.blend $(EXPORT_BOUNDBOX)
+$(DIST)/cat.boundbox : cat.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Player '$@'
 
 $(DIST)/living_room.scene : living_room.blend $(EXPORT_SCENE)
@@ -45,11 +45,11 @@ $(DIST)/living_room.pnct : living_room.blend $(EXPORT_MESHES)
 $(DIST)/living_room.boundbox : living_room.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':LivingRoom '$@'
 
-$(DIST)/kitchen.scene : living_room.blend $(EXPORT_SCENE)
+$(DIST)/kitchen.scene : kitchen.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Kitchen '$@'
 
-$(DIST)/kitchen.pnct : living_room.blend $(EXPORT_MESHES)
+$(DIST)/kitchen.pnct : kitchen.blend $(EXPORT_MESHES)
 	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Kitchen '$@'
 
-$(DIST)/kitchen.boundbox : living_room.blend $(EXPORT_BOUNDBOX)
+$(DIST)/kitchen.boundbox : kitchen.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Kitchen '$@'

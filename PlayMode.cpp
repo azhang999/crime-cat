@@ -143,18 +143,51 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
 	}
 }
 
-void PlayMode::GetWalkingFrames() {
-    for (uint32_t idx = 0; idx < 5; ++idx) {
-        std::string frame_name = "Walk" + std::to_string(idx);
-        auto walk_iter = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
-                                [frame_name](const Scene::Drawable & elem) { return elem.transform->name == frame_name; });
-        player_walking.frames.push_back(*walk_iter);
-        if (idx != 0) {
-            cat_scene.drawables.erase(walk_iter);
-        }
+// animation code
+bool RemoveFrameByName(Scene &scene, std::string name) {
+    auto frame_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [name](const Scene::Drawable & elem) { return elem.transform->name == name; });
+    if (frame_iter == scene.drawables.end()) return false;
+    scene.drawables.erase(frame_iter);
+    return true;
+}
+
+void AddFrame(Scene &scene, Scene::Drawable &drawable) {
+    scene.drawables.push_back(drawable);
+}
+
+void RemoveAllFrames(Scene &scene) {
+    while (scene.drawables.begin() != scene.drawables.end()) {
+        scene.drawables.erase(scene.drawables.begin());
     }
-    printf("frames: %lu, times:%lu\n", player_walking.frames.size(), player_walking.frame_times.size());
-    if (player_walking.frames.size() != player_walking.frame_times.size()) throw std::runtime_error("Number of walking frames is incorrect\n");
+}
+
+void GetFrames(Scene &scene, PlayMode::Animation &animation, std::string name) {
+    animation.name = name;
+    for (uint32_t idx = 0; idx < animation.frame_times.size(); ++idx) {
+        std::string frame_name = animation.name + std::to_string(idx);
+        auto frame_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [frame_name](const Scene::Drawable & elem) { return elem.transform->name == frame_name; });
+        animation.frames.push_back(*frame_iter);
+        scene.drawables.erase(frame_iter);
+    }
+}
+
+void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
+    if (!enable) return;
+
+    timer += elapsed;
+    if (frame_times[frame_idx] <= timer) {
+        std::string old_frame_name = name + std::to_string(frame_idx);
+        if (RemoveFrameByName(scene, old_frame_name)) { // continuing this animation
+            frame_idx = (frame_idx + 1) % frames.size();
+        } else { // was in the middle of another animation
+            RemoveAllFrames(scene);
+            frame_idx = 0;
+        }
+        timer = 0.f;
+        AddFrame(scene, frames[frame_idx]);
+    }
 }
 
 PlayMode::PlayMode() : 
@@ -163,11 +196,16 @@ PlayMode::PlayMode() :
     GenerateBBox(cat_scene, cat_meshes);
 
     // remove player capsule from being drawn
-    auto player_iter = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
-                                [](const Scene::Drawable & elem) { return elem.transform->name == "Player"; });
-    cat_scene.drawables.erase(player_iter);
+    RemoveFrameByName(cat_scene, "Player");
 
-    GetWalkingFrames();
+    player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+    player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+
+    GetFrames(cat_scene, player_walking, "Walk");
+    GetFrames(cat_scene, player_up_jump, "UpJump");
+
+    // start cat with Walk0 fame
+    AddFrame(cat_scene, player_walking.frames[0]);
 
     if (cat_scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(cat_scene.cameras.size()));
 	player.camera = &cat_scene.cameras.front();
@@ -247,15 +285,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             theta -= motion.y;
 			theta = -std::min(-theta, 0.5f * 3.1415926f);
 			theta = -std::max(-theta, 0.05f * 3.1415926f);
-
-            // face up, face down [TODO: let camera rotate up and down]
-			// float pitch = glm::pitch(player.camera->transform->rotation);
-			// pitch += motion.y * player.camera->fovy;
-			//camera looks down -z (basically at the player's feet) when pitch is at zero.
-			// pitch = std::min(pitch, 0.95f * 3.1415926f);
-			// pitch = std::max(pitch, 0.05f * 3.1415926f);
-			// player.camera->transform->rotation = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
-
 			return true;
 		}
 	}
@@ -570,18 +599,7 @@ void PlayMode::update(float elapsed) {
     }
 
     // animate walking
-    if (moved) {
-        player_walking.timer += elapsed;
-        if (player_walking.frame_times[player_walking.frame_idx] <= player_walking.timer) {
-            std::string old_frame_name = "Walk" + std::to_string(player_walking.frame_idx);
-            auto old_frame = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
-                                [old_frame_name](const Scene::Drawable & elem) { return elem.transform->name == old_frame_name; });
-            cat_scene.drawables.erase(old_frame);
-            player_walking.frame_idx = (player_walking.frame_idx + 1) % player_walking.frames.size();
-            player_walking.timer = 0.f;
-            cat_scene.drawables.push_back(player_walking.frames[player_walking.frame_idx]);
-        }
-    }
+    player_walking.animate(cat_scene, moved, elapsed);
 
     std::string object_collide_name = collide();
 

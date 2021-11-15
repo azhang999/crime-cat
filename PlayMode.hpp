@@ -24,7 +24,6 @@ struct PlayMode : Mode {
     void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
     std::string collide();
-    void GetWalkingFrames();
 
 	//----- game state -----
 
@@ -70,12 +69,22 @@ struct PlayMode : Mode {
         // float ground_level = 0.f;
 	} player;
 
-    struct Walking {
+    struct Animation {
         std::vector<Scene::Drawable> frames;
-        std::vector<float> frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+        std::vector<float> frame_times;
         uint32_t frame_idx = 0;
         float timer = 0.f;
-    } player_walking;
+        std::string name;
+
+        void animate(Scene &scene, bool enable, float elapsed);
+    } player_walking, player_up_jump;
+
+    // struct Walking {
+    //     std::vector<Scene::Drawable> frames;
+    //     std::vector<float> frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+    //     uint32_t frame_idx = 0;
+    //     float timer = 0.f;
+    // } player_walking;
 
 	int score = 0;
 

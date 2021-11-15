@@ -69,6 +69,8 @@ struct PlayMode : Mode {
         // float ground_level = 0.f;
 	} player;
 
+    glm::vec3 intersection_vec;
+
     struct Animation {
         std::vector<Scene::Drawable> frames;
         std::vector<float> frame_times;

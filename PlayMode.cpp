@@ -330,7 +330,9 @@ glm::vec3 closest_point_on_line_segment(glm::vec3 A, glm::vec3 B, glm::vec3 Poin
 }
 
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
-bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+bool sphere_triangle_collision(glm::vec3 center, float radius, 
+                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, 
+                                                    glm::vec3 &intersection_vec) {
     // float3 p0, p1, p2; // triangle corners
     // float3 center; // sphere center
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
@@ -368,36 +370,36 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     intersects |= distsq3 < radiussq;
 
     if (inside || intersects) {
-        // float3 best_point = point0;
-        // float3 intersection_vec;
+        glm::vec3 best_point = point0;
+        //glm::vec3 intersection_vec;
         
-        // if (inside) {
-        //     intersection_vec = center - point0;
-        // } else {
-        //     float3 d = center - point1;
-        //     float best_distsq = dot(d, d);
-        //     best_point = point1;
-        //     intersection_vec = d;
+        if (inside) {
+            intersection_vec = center - point0;
+        } else {
+            glm::vec3 d = center - point1;
+            float best_distsq = dot(d, d);
+            best_point = point1;
+            intersection_vec = d;
         
-        //     d = center - point2;
-        //     float distsq = dot(d, d);
-        //     if (distsq < best_distsq) {
-        //         distsq = best_distsq;
-        //         best_point = point2;
-        //         intersection_vec = d;
-        //     }
+            d = center - point2;
+            float distsq = dot(d, d);
+            if (distsq < best_distsq) {
+                distsq = best_distsq;
+                best_point = point2;
+                intersection_vec = d;
+            }
         
-        //     d = center - point3;
-        //     float distsq = dot(d, d);
-        //     if (distsq < best_distsq) {
-        //         distsq = best_distsq;
-        //         best_point = point3; 
-        //         intersection_vec = d;
-        //     }
-        // }
+            d = center - point3;
+            distsq = dot(d, d);
+            if (distsq < best_distsq) {
+                distsq = best_distsq;
+                best_point = point3; 
+                intersection_vec = d;
+            }
+        }
         
-        // float3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
-        // float3 penetration_normal = penetration_vec / len;  // normalize
+        // glm::vec3 len = length(intersection_vec);  // vector3 length calculation: sqrt(dot(v, v))
+        // glm::vec3 penetration_normal = intersection_vec / len;  // normalize
         // float penetration_depth = radius - len; // radius = sphere radius
         return true; // intersection success
     }
@@ -405,7 +407,7 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
     return false;
 }
 
-bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius) {
+bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, float radius, glm::vec3 &intersection_vec) {
     glm::vec3 close0 = closest_point_on_line_segment(A, B, p0);
     glm::vec3 close1 = closest_point_on_line_segment(A, B, p1);
     glm::vec3 close2 = closest_point_on_line_segment(A, B, p2);
@@ -425,12 +427,12 @@ bool parallel_capsule_triangle_collision(glm::vec3 A, glm::vec3 B, glm::vec3 p0,
         d = temp_d;
     }
 
-    return sphere_triangle_collision(center, radius, p0, p1, p2);
+    return sphere_triangle_collision(center, radius, p0, p1, p2, intersection_vec);
 }
 
 // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
 // Note for triangle normal, p0, p1, p2 matters
-bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2) {
+bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 &intersection_vec) {
     // Compute capsule line endpoints A, B like before in capsule-capsule case:
     glm::vec3 CapsuleNormal = glm::normalize(tip - base); 
     glm::vec3 LineEndOffset = CapsuleNormal * radius; 
@@ -442,7 +444,7 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     glm::vec3 N = glm::normalize(glm::cross(p1 - p0, p2 - p0)); // plane normal
 
     if (std::abs(glm::dot(N, CapsuleNormal)) == 0.f) {
-        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius);
+        return parallel_capsule_triangle_collision(A, B, p0, p1, p2, radius, intersection_vec);
     }
 
 
@@ -491,51 +493,52 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     // The center of the best sphere candidate:
     glm::vec3 center = closest_point_on_line_segment(A, B, reference_point);
 
-    return sphere_triangle_collision(center, radius, p0, p1, p2);
+    return sphere_triangle_collision(center, radius, p0, p1, p2, intersection_vec);
 }
 
 bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius, 
-                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
-    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1)) {
+                                glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3,
+                                glm::vec3 &intersection_vec) {
+    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1, intersection_vec)) {
         return true;
     }
 
-    return capsule_triangle_collision(tip, base, radius, p2, p1, p3);
+    return capsule_triangle_collision(tip, base, radius, p2, p1, p3, intersection_vec);
 }
 
-bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, SurfaceType *surface) {
+bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, SurfaceType *surface, glm::vec3 &intersection_vec) {
     // top
-    if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[6], p[5], p[1], p[2], intersection_vec)) {
         *surface = TOP;
         return true;
     }
 
     // bottom
-    if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[7], p[3], p[0], intersection_vec)) {
         *surface = BOT;
         return true;
     }
 
     // left
-    if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[4], p[5], p[6], p[7], intersection_vec)) {
         *surface = LEFT;
         return true;
     }
 
     // right
-    if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[3], p[2], p[1], p[0], intersection_vec)) {
         *surface = RIGHT;
         return true;
     }
 
     // front
-    if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[7], p[6], p[2], p[3], intersection_vec)) {
         *surface = FRONT;
         return true;
     }
 
     // back
-    if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4])) {
+    if (capsule_rectagle_collision(tip, base, radius, p[0], p[1], p[5], p[4], intersection_vec)) {
         *surface = BACK;
         return true;
     }
@@ -548,7 +551,7 @@ Scene::Transform *PlayMode::collide() {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
 
         SurfaceType surface;
-        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface, intersection_vec)) {
             return drawable.transform;
         }
     }
@@ -556,7 +559,7 @@ Scene::Transform *PlayMode::collide() {
     for (auto &drawable : kitchen_scene.drawables) {
 
         SurfaceType surface;
-        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
+        if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface, intersection_vec)) {
             return drawable.transform;
         }
     }
@@ -740,9 +743,11 @@ void PlayMode::update(float elapsed) {
 
     if (object_collide_name != "") {
         // place cat slightly above surface
-        float top_height = get_top_height(object_collide);
-        auto new_pos = prev_player_position;
-        new_pos.z = top_height + 1.00001f;
+        float penetration_depth = player.radius - glm::length(intersection_vec);
+        // float top_height = get_top_height(object_collide);
+        auto new_pos =  player.transform->position + ((penetration_depth + 0.0001f) * glm::normalize(intersection_vec));
+        // auto new_pos = prev_player_position;
+        // new_pos.z = top_height + 1.00001f;
         player.transform->position = new_pos;
         player.tip = new_pos;
         player.tip.z += 1.0f;
@@ -969,8 +974,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     //     glDisable(GL_DEPTH_TEST);
     //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-    //     for (auto &drawable : scene.drawables) {
-    //         if (drawable.transform->name != "SideTable" && drawable.transform->name != "Vase") continue;
+    //     for (auto &drawable : kitchen_scene.drawables) {
+    //         // if (drawable.transform->name != "SideTable" && drawable.transform->name != "Vase") continue;
 
     //         //top
     //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
@@ -1010,7 +1015,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 
     //     }
-
     // }
 
 	{ //use DrawLines to overlay some text:

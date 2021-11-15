@@ -146,14 +146,22 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
     if (room_type == RoomType::LivingRoom) {
         float rug_height = 0.0f;
         float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
+        float coffeetable_x_min = 0, coffeetable_x_max = 0, coffeetable_y_min = 0, coffeetable_y_max = 0;
 
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
             
             CollisionType type = CollisionType::None;  
             if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")  type = CollisionType::Swat;
+            else if (drawable.transform->name == "Key")  type = CollisionType::Steal;
             else if (drawable.transform->name == "Mug")  type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
+            else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
+            else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;     //CollisionType::PushOff;
+            // else if (drawable.transform->name == "Magazine.001")    type = CollisionType::PushOff;
+            // else if (drawable.transform->name == "Magazine.002")    type = CollisionType::PushOff;
+            // else if (drawable.transform->name == "Magazine.003")    type = CollisionType::PushOff;
+            // else if (drawable.transform->name == "Magazine.004")    type = CollisionType::PushOff;
 
             objects.push_back( RoomObject(drawable.transform, type) );
 
@@ -163,6 +171,12 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 sidetable_x_max = drawable.transform->bbox[5].x;
                 sidetable_y_min = drawable.transform->bbox[1].y;
                 sidetable_y_max = drawable.transform->bbox[2].y;
+            }
+            if (drawable.transform->name == "Table.005") {
+                coffeetable_x_min = drawable.transform->bbox[1].x;
+                coffeetable_x_max = drawable.transform->bbox[5].x;
+                coffeetable_y_min = drawable.transform->bbox[1].y;
+                coffeetable_y_max = drawable.transform->bbox[2].y;
             }
             if (drawable.transform->name == "Floor") {
                 living_room_floor = drawable.transform;
@@ -177,6 +191,14 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         vase_obj.end_height   = rug_height;
         vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
         vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
+
+        // auto magazine_iter = find_if(objects.begin(), objects.end(),
+        //                         [](const RoomObject &elem) { return elem.transform->name == "Magazine"; });
+        // RoomObject &magazine_obj = *(magazine_iter);
+        // magazine_obj.start_height = magazine_obj.transform->position.z;
+        // magazine_obj.end_height   = rug_height;
+        // magazine_obj.x_min = coffeetable_x_min; magazine_obj.x_max = coffeetable_x_max;
+        // magazine_obj.y_min = coffeetable_y_min; magazine_obj.y_max = coffeetable_y_max;
 
         // ----------- Save floor -----------
     }
@@ -333,13 +355,16 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
         if (obj.name == current_obj.name) continue;
 
         auto capsule = current_obj.capsule;
-
-        // ---------------------< START HEERE - SAVE + GETN INFO ABOUT OCLLISION MAG+DIR
-
         SurfaceType surface;
         if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface, pen_normal, pen_depth)) {
             // std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << ", direction: " 
             // << glm::to_string(*pen_normal) << ", depth: " << *pen_depth << std::endl;
+
+            // if (std::isnan((*pen_normal).x) || std::isnan((*pen_normal).x) || std::isnan((*pen_normal).z)) {
+            //     std::cout << "----------- nevermind ignore this it's nan -----------" << std::endl;
+            //     return "";
+            // }
+
             return obj.name;
         }
     }
@@ -461,21 +486,41 @@ void PlayMode::update(float elapsed) {
     auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
     RoomObject &collision_obj = *(collision_obj_iter);
+    // bool need_to_erase = false;
 
-    if (player.swatting && collision_obj.collision_type == CollisionType::Swat && !collision_obj.done) {
-        // Erase references to drawable and its object
-        auto col_drawable_iter = find_if((*current_scene).drawables.begin(), (*current_scene).drawables.end(),
-                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
-        
-        if (col_drawable_iter != (*current_scene).drawables.end())
-            (*current_scene).drawables.erase(col_drawable_iter); 
-        (*current_objects).erase(collision_obj_iter);
-
+    // --------- Steal object ---------
+    if (player.swatting && collision_obj.collision_type == CollisionType::Steal && !collision_obj.done) {
         score += 3;
         collision_obj.done = true;
         player.swatting = false;
-    } 
+
+        // Erase references to drawable and its object
+        auto col_drawable_iter = find_if((*current_scene).drawables.begin(), (*current_scene).drawables.end(),
+                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
+        if (col_drawable_iter != (*current_scene).drawables.end())
+            (*current_scene).drawables.erase(col_drawable_iter);
+        // collision_obj.capsule.tip = glm::vec3(-1000000.0, -1000000.0, -1000000.0);
+        // collision_obj.capsule.base = glm::vec3(-1000000.0, -1000000.0, -1000000.0);
+        // !!! TODO: this will need a HOTFIX
+        // (*current_objects).erase(obj_iter);
+        // need_to_erase = true;
+    }
+    // --------- Destroy object ---------
+    else if (player.swatting && collision_obj.collision_type == CollisionType::Destroy && !collision_obj.done) {
+        // TODO: post-collision mesh-switchout
+        score += 5;
+        collision_obj.done = true;
+        player.swatting = false;
+    }
+    // --------- Knock over object ---------
+    else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
+        // TODO: post-collision mesh-switchout
+        score += 3;
+        collision_obj.done = true;
+    }
+    // --------- Push object off of surface ---------
     else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
+        // std::cout << "I have no idea why this is happening" << std::endl;
         // Save object's original position
         collision_obj.prev_position = collision_obj.transform->position;
 
@@ -503,7 +548,6 @@ void PlayMode::update(float elapsed) {
             // TODO: Assumes objects are off the same weight - can add per-object weights (i.e. heavier objects = slower velocities)
             glm::vec3 obj_velocity = offset / elapsed; //(collision_obj.transform->position - collision_obj.prev_position) / elapsed;
             float obj_velocity_length = glm::length(obj_velocity);
-
             obj_velocity = glm::normalize(obj_velocity);
 
             if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
@@ -524,15 +568,7 @@ void PlayMode::update(float elapsed) {
             }
         }
     }
-
-    // ------------------- TODO: remove these after walls have been added back -------------------
-    // Allow walking on all floors 
-    else if (collision_obj.transform == living_room_floor || collision_obj.transform == living_room_floor) {
-        std::cout << "walking on floor..." << std::endl;
-    }
-
-    // -------------------------------------------------------------------------------------------
-
+    // --------- * No collision occured * ---------
     else if (object_collide_name != "") { // undo movement
         player.transform->position = prev_player_position;
         player.tip = prev_player_position;
@@ -540,6 +576,14 @@ void PlayMode::update(float elapsed) {
         player.base = prev_player_position;
         player.base.z -= 1.0f;
     }
+
+    // if (need_to_erase) {
+    //     (*current_objects).erase(collision_obj_iter);
+    //     std::cout << "REMAINING OBJECTS: " << std::endl;
+    //     for (auto &remaining_obj : *(current_objects)) {
+    //         std::cout << "\t" << remaining_obj.name << std::endl;
+    //     }
+    // }
 
     // ##################### Resolve remaining collision behavior #####################
     for (auto &obj : *current_objects) {
@@ -671,90 +715,89 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
         // for (auto obj : objects) {
-            // auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-            //                                 [](const RoomObject & elem) { return elem.name == "Vase"; });
-            // auto obj = *(vase_obj_iter);
-            // auto tip = obj.capsule.tip;
-            // auto base = obj.capsule.base;
-            // auto radius = obj.capsule.radius;
+            auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
+                                            [](const RoomObject & elem) { return elem.name == "Key"; });
+            auto obj = *(vase_obj_iter);
+            auto tip = obj.capsule.tip;
+            auto base = obj.capsule.base;
+            auto radius = obj.capsule.radius;
 
-            // // tip
-            // auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
-            // auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
-            // auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
-            // auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
+            // tip
+            auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
+            auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
+            auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
+            auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
             
-            // draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-            // // base
-            // auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
-            // auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
-            // auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
-            // auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
+            // base
+            auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
+            auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
+            auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
+            auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
             
-            // draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-            // // sides
-            // draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-            // draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            // sides
+            draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+            draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
         // }
 
-        // for (auto &drawable : (*current_scene).drawables) {
-        //     if (drawable.transform->name != "Vase" && drawable.transform->name != "SideTable") continue;
+        for (auto &drawable : (*current_scene).drawables) {
+            if (drawable.transform->name != "Key") continue;
 
-            
-        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
 
-        //     // // top
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // top
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // // // bottom
-        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // // bottom
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        //     // // left
-        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // left
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // // right
-        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // right
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // // front
-        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // front
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // // back
-        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // back
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        // }
+        }
 
     }
 

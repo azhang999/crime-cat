@@ -7,9 +7,10 @@ enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
 
 enum CollisionType {
 	None,
-	Swat,
+	Steal,
 	KnockOver,
 	PushOff,
+	Destroy,
 };
 
 class RoomObject {

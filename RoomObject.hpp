@@ -37,6 +37,7 @@ class RoomObject {
 		std::string name;
 		Scene::Transform *transform = nullptr;
 		glm::vec3 orig_bbox[8];
+		glm::vec3 orig_scale;
 
 		// ----- Capsule properties -----
 		struct Capsule {

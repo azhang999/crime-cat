@@ -19,6 +19,7 @@ struct PlayMode : Mode {
 	virtual ~PlayMode();
 
 	enum RoomType {
+		None,
 		LivingRoom,
 		Kitchen,
 		// Bathroom
@@ -34,7 +35,8 @@ struct PlayMode : Mode {
 
 	void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
-	void check_room();
+	// void check_room();
+	// std::string floor_collide(); //RoomType floor_collide();
 
     std::string collide();
 	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
@@ -48,7 +50,7 @@ struct PlayMode : Mode {
 	} left, right, down, up, space, swat;
 
 	// ------------------ Rooms ------------------
-	RoomType current_room;
+	RoomType current_room = RoomType::LivingRoom;
 	Scene *current_scene = nullptr;
 	std::vector<RoomObject> *current_objects = nullptr;
 

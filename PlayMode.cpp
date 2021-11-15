@@ -146,7 +146,6 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
     if (room_type == RoomType::LivingRoom) {
         float rug_height = 0.0f;
         float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
-        float coffeetable_x_min = 0, coffeetable_x_max = 0, coffeetable_y_min = 0, coffeetable_y_max = 0;
 
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
@@ -157,11 +156,7 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             else if (drawable.transform->name == "Mug")  type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
             else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;     //CollisionType::PushOff;
-            // else if (drawable.transform->name == "Magazine.001")    type = CollisionType::PushOff;
-            // else if (drawable.transform->name == "Magazine.002")    type = CollisionType::PushOff;
-            // else if (drawable.transform->name == "Magazine.003")    type = CollisionType::PushOff;
-            // else if (drawable.transform->name == "Magazine.004")    type = CollisionType::PushOff;
+            else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;
 
             objects.push_back( RoomObject(drawable.transform, type) );
 
@@ -171,12 +166,6 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 sidetable_x_max = drawable.transform->bbox[5].x;
                 sidetable_y_min = drawable.transform->bbox[1].y;
                 sidetable_y_max = drawable.transform->bbox[2].y;
-            }
-            if (drawable.transform->name == "Table.005") {
-                coffeetable_x_min = drawable.transform->bbox[1].x;
-                coffeetable_x_max = drawable.transform->bbox[5].x;
-                coffeetable_y_min = drawable.transform->bbox[1].y;
-                coffeetable_y_max = drawable.transform->bbox[2].y;
             }
             if (drawable.transform->name == "Floor") {
                 living_room_floor = drawable.transform;
@@ -191,14 +180,6 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         vase_obj.end_height   = rug_height;
         vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
         vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
-
-        // auto magazine_iter = find_if(objects.begin(), objects.end(),
-        //                         [](const RoomObject &elem) { return elem.transform->name == "Magazine"; });
-        // RoomObject &magazine_obj = *(magazine_iter);
-        // magazine_obj.start_height = magazine_obj.transform->position.z;
-        // magazine_obj.end_height   = rug_height;
-        // magazine_obj.x_min = coffeetable_x_min; magazine_obj.x_max = coffeetable_x_max;
-        // magazine_obj.y_min = coffeetable_y_min; magazine_obj.y_max = coffeetable_y_max;
 
         // ----------- Save floor -----------
     }
@@ -247,6 +228,10 @@ PlayMode::PlayMode() :
 
     GenerateBBox(living_room_scene, living_room_meshes);
     GenerateBBox(kitchen_scene, kitchen_meshes);
+
+    // ##################################################################
+    //          Premature optimization is the root of all evil :)
+    // ###############################################################
 
     generate_room_objects(living_room_scene, living_room_objects, RoomType::LivingRoom);
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
@@ -394,45 +379,24 @@ std::string PlayMode::collide() {
     // -------- TODO: remove these after walls are added back into the scene --------
 
     if (capsule_bbox_collision(player.tip, player.base, player.radius, counter_transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-        // *collided_object = obj;
         return counter_transform->name;
     }
     if (capsule_bbox_collision(player.tip, player.base, player.radius, living_room_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-        // *collided_object = obj;
+        if (current_room != RoomType::LivingRoom) switch_rooms(RoomType::LivingRoom);
         return living_room_floor->name;
     }
     if (capsule_bbox_collision(player.tip, player.base, player.radius, kitchen_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-        // *collided_object = obj;
+        // std::cout << "------ Walked into KITCHEN. Current room = " << ((current_room == RoomType::LivingRoom) ? "LivingRoom" : "Kitchen");
+        if (current_room != RoomType::Kitchen) switch_rooms(RoomType::Kitchen);
+        // std::cout << ", NEW ROOM = " << ((current_room == RoomType::LivingRoom) ? "LivingRoom" : "Kitchen") << std::endl;
         return kitchen_floor->name;
     }
 
     return "";
 }
 
-void PlayMode::check_room() {
-    SurfaceType surface;
-    glm::vec3 penetration_normal;
-    float penetration_depth;
-
-    // ----- Living room -----
-    if (current_room != RoomType::LivingRoom && capsule_bbox_collision(player.tip, player.base, player.radius, living_room_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-        std::cout << "================== LIVING ROOM ==================" << std::endl;
-        switch_rooms(RoomType::LivingRoom);
-    }
-
-    // ----- Kitchen -----
-    else if (current_room != RoomType::Kitchen && capsule_bbox_collision(player.tip, player.base, player.radius, kitchen_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-        std::cout << "================== KITCHEN ==================" << std::endl;
-        switch_rooms(RoomType::Kitchen);
-    }
-}
-
-
 void PlayMode::update(float elapsed) {
     glm::vec3 prev_player_position = player.transform->position;
-
-    // Check current position and update floor/room as needed
-    check_room();
 
 	//move player:
     //combine inputs into a move:
@@ -473,8 +437,7 @@ void PlayMode::update(float elapsed) {
         if (!left.pressed && right.pressed)
             player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
-
-
+    
     // #####################################################################
     //                          Handle Collisions
     // #####################################################################
@@ -486,7 +449,6 @@ void PlayMode::update(float elapsed) {
     auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
     RoomObject &collision_obj = *(collision_obj_iter);
-    // bool need_to_erase = false;
 
     // --------- Steal object ---------
     if (player.swatting && collision_obj.collision_type == CollisionType::Steal && !collision_obj.done) {
@@ -494,16 +456,32 @@ void PlayMode::update(float elapsed) {
         collision_obj.done = true;
         player.swatting = false;
 
+        // Save current scale
+        collision_obj.orig_scale = collision_obj.transform->scale;
+        collision_obj.transform->scale = glm::vec3(0);
+        // Save current position
+        collision_obj.prev_position = collision_obj.transform->position;
+        collision_obj.transform->position = glm::vec3(-10000);
+        // Save current bounding box
+        for (auto i = 0; i < 8; i++) {
+            collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i];
+            collision_obj.transform->bbox[i] = glm::vec3(-10000);
+        }
+        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
+        collision_obj.capsule.tip = glm::vec3(-10000);
+        collision_obj.capsule.base = glm::vec3(-10000);
+        
+
+        // std::cout << "Scale before: " << glm::to_string(collision_obj.orig_scale) << ", scale after: " << glm::to_string(collision_obj.transform->scale) << std::endl;
+
+        // TODO: debug this if object needs to be deleted
         // Erase references to drawable and its object
-        auto col_drawable_iter = find_if((*current_scene).drawables.begin(), (*current_scene).drawables.end(),
-                                [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
-        if (col_drawable_iter != (*current_scene).drawables.end())
-            (*current_scene).drawables.erase(col_drawable_iter);
-        // collision_obj.capsule.tip = glm::vec3(-1000000.0, -1000000.0, -1000000.0);
-        // collision_obj.capsule.base = glm::vec3(-1000000.0, -1000000.0, -1000000.0);
-        // !!! TODO: this will need a HOTFIX
+        // auto col_drawable_iter = find_if((*current_scene).drawables.begin(), (*current_scene).drawables.end(),
+        //                         [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
+        // but pretty sure we want to keep this object around for later 
+        // if (col_drawable_iter != (*current_scene).drawables.end())
+        //     (*current_scene).drawables.erase(col_drawable_iter);
         // (*current_objects).erase(obj_iter);
-        // need_to_erase = true;
     }
     // --------- Destroy object ---------
     else if (player.swatting && collision_obj.collision_type == CollisionType::Destroy && !collision_obj.done) {
@@ -752,7 +730,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // }
 
         for (auto &drawable : (*current_scene).drawables) {
-            if (drawable.transform->name != "Key") continue;
+            if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
 
             // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
             // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));

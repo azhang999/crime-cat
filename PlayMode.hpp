@@ -77,7 +77,7 @@ struct PlayMode : Mode {
         std::string name;
 
         void animate(Scene &scene, bool enable, float elapsed);
-    } player_walking, player_up_jump;
+    } player_walking, player_up_jump, player_down_jump;
 
     // struct Walking {
     //     std::vector<Scene::Drawable> frames;

@@ -144,6 +144,12 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
 }
 
 // animation code
+bool SearchFrameByName(Scene &scene, std::string name) {
+    auto frame_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                                [name](const Scene::Drawable & elem) { return elem.transform->name == name; });
+    return frame_iter != scene.drawables.end();
+}
+
 bool RemoveFrameByName(Scene &scene, std::string name) {
     auto frame_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
                                 [name](const Scene::Drawable & elem) { return elem.transform->name == name; });
@@ -177,8 +183,10 @@ void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
     if (!enable) return;
 
     timer += elapsed;
-    if (frame_times[frame_idx] <= timer) {
-        std::string old_frame_name = name + std::to_string(frame_idx);
+    std::string old_frame_name = name + std::to_string(frame_idx);
+    bool found = SearchFrameByName(scene, old_frame_name);
+
+    if (!found || frame_times[frame_idx] <= timer) {
         if (RemoveFrameByName(scene, old_frame_name)) { // continuing this animation
             frame_idx = (frame_idx + 1) % frames.size();
         } else { // was in the middle of another animation
@@ -199,10 +207,12 @@ PlayMode::PlayMode() :
     RemoveFrameByName(cat_scene, "Player");
 
     player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
-    player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+    player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
+    player_down_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
 
     GetFrames(cat_scene, player_walking, "Walk");
     GetFrames(cat_scene, player_up_jump, "UpJump");
+    GetFrames(cat_scene, player_down_jump, "DownJump");
 
     // start cat with Walk0 fame
     AddFrame(cat_scene, player_walking.frames[0]);
@@ -598,9 +608,6 @@ void PlayMode::update(float elapsed) {
             player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
 
-    // animate walking
-    player_walking.animate(cat_scene, moved, elapsed);
-
     std::string object_collide_name = collide();
 
     if (player.swatting && object_collide_name == "Key") {    // erase on swat
@@ -713,6 +720,20 @@ void PlayMode::update(float elapsed) {
         player.jumping = false;
         player.air_time = 0.f;
         player.starting_height = player.transform->position.z;
+    }
+
+    // animate walking
+    if (prev_player_position.z == player.transform->position.z) { // potentially walking
+        if (moved) {
+            player_walking.animate(cat_scene, true, elapsed);
+        } else {
+            RemoveAllFrames(cat_scene);
+            AddFrame(cat_scene, player_walking.frames[player_walking.frame_idx]);
+        }
+    } else if (prev_player_position.z < player.transform->position.z) { // up jump
+        player_up_jump.animate(cat_scene, true, elapsed);
+    } else { // down jump
+        player_down_jump.animate(cat_scene, true, elapsed);
     }
 
     // Handle vase falling off of table

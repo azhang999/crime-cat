@@ -93,6 +93,25 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
+float get_top_height(Scene::Transform *transform) {
+    if (transform->top_stand) {
+        return transform->bbox[2].z;
+    } else if (transform->bot_stand) {
+        return transform->bbox[4].z;
+    } else if (transform->back_stand) {
+        return transform->bbox[1].z;
+    } else if (transform->front_stand) {
+        return transform->bbox[2].z;
+    } else if (transform->left_stand) {
+        return transform->bbox[5].z;
+    } else if (transform->right_stand) {
+        return transform->bbox[1].z;
+    } else {
+        throw std::runtime_error(transform->name + " does not have a standable surface\n");
+    }
+    return 0.f;
+}
+
 void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
     for (auto &drawable : scene.drawables) {
         BoundBox const &bbox = meshes->lookup_bound_box(drawable.transform->name);
@@ -524,13 +543,13 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
     return false;
 }
 
-std::string PlayMode::collide() {
+Scene::Transform *PlayMode::collide() {
     for (auto &drawable : living_room_scene.drawables) {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
 
         SurfaceType surface;
         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
-            return drawable.transform->name;
+            return drawable.transform;
         }
     }
 
@@ -538,7 +557,7 @@ std::string PlayMode::collide() {
 
         SurfaceType surface;
         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
-            return drawable.transform->name;
+            return drawable.transform;
         }
     }
 
@@ -559,7 +578,7 @@ std::string PlayMode::collide() {
     //     return wall4->name;
     // }
 
-    return "";
+    return nullptr;
 }
 
 void PlayMode::update(float elapsed) {
@@ -608,7 +627,11 @@ void PlayMode::update(float elapsed) {
             player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
 
-    std::string object_collide_name = collide();
+    auto object_collide = collide();
+    std::string object_collide_name = "";
+    if (object_collide != nullptr) {
+        object_collide_name = object_collide->name;
+    }
 
     if (player.swatting && object_collide_name == "Key") {    // erase on swat
         std::cout << "+++++++ SWATTING Key +++++++" << std::endl;
@@ -709,13 +732,21 @@ void PlayMode::update(float elapsed) {
     player.base = player.transform->position;
     player.base.z -= 1.0f;
 
-    object_collide_name = collide();
+    object_collide = collide();
+    object_collide_name = "";
+    if (object_collide != nullptr) {
+        object_collide_name = object_collide->name;
+    }
 
     if (object_collide_name != "") {
-        player.transform->position = prev_player_position;
-        player.tip = prev_player_position;
+        // place cat slightly above surface
+        float top_height = get_top_height(object_collide);
+        auto new_pos = prev_player_position;
+        new_pos.z = top_height + 1.00001f;
+        player.transform->position = new_pos;
+        player.tip = new_pos;
         player.tip.z += 1.0f;
-        player.base = prev_player_position;
+        player.base = new_pos;
         player.base.z -= 1.0f;
         player.jumping = false;
         player.air_time = 0.f;

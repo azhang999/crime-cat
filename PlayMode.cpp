@@ -228,10 +228,12 @@ PlayMode::PlayMode() :
     player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
     player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
     player_down_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
+    player_swat.frame_times = {0.1f, 0.1f, 100000.f}; // don't want to cycle
 
     GetFrames(cat_scene, player_walking, "Walk");
     GetFrames(cat_scene, player_up_jump, "UpJump");
     GetFrames(cat_scene, player_down_jump, "DownJump");
+    GetFrames(cat_scene, player_swat, "Swat");
 
     // start cat with Walk0 fame
     AddFrame(cat_scene, player_walking.frames[0]);
@@ -496,14 +498,49 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
     return sphere_triangle_collision(center, radius, p0, p1, p2, intersection_vec);
 }
 
+bool is_almost_up_vec(glm::vec3 &v) {
+    glm::vec3 n_v = glm::normalize(v);
+
+    float epsilon = 0.01f;
+    if (n_v.x >= epsilon || n_v.x <= -epsilon) {
+        return false;
+    }
+
+    if (n_v.y >= epsilon || n_v.y <= -epsilon) {
+        return false;
+    }
+
+    if (n_v.z >= epsilon + 1.0f || n_v.z <= -epsilon - 1.0f) {
+        return false;
+    }
+
+    return true;
+}
+
 bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius, 
                                 glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3,
                                 glm::vec3 &intersection_vec) {
-    if (capsule_triangle_collision(tip, base, radius, p0, p3, p1, intersection_vec)) {
-        return true;
-    }
+    
+    glm::vec3 collide1_int;
+    glm::vec3 collide2_int;
+    bool collide1 = capsule_triangle_collision(tip, base, radius, p0, p3, p1, collide1_int);
+    bool collide2 = capsule_triangle_collision(tip, base, radius, p2, p1, p3, collide2_int);
 
-    return capsule_triangle_collision(tip, base, radius, p2, p1, p3, intersection_vec);
+    if (collide1 && collide2) {
+        bool use_up1 = is_almost_up_vec(collide1_int);
+        if (use_up1) {
+            intersection_vec = collide1_int;
+        } else {
+            intersection_vec = collide2_int;
+        }
+    } else if (collide1) {
+        intersection_vec = collide1_int;
+    } else if (collide2) {
+        intersection_vec = collide2_int;
+    }
+    return collide1 || collide2;
+
+    // return capsule_triangle_collision(tip, base, radius, p2, p1, p3, intersection_vec);
 }
 
 bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::vec3 *p, SurfaceType *surface, glm::vec3 &intersection_vec) {
@@ -606,6 +643,15 @@ void PlayMode::update(float elapsed) {
         player.swatting = true;
     }
 
+    if (player.swatting) {
+        player.swatting_timer += elapsed;
+        float total_swat_time = 0.3f;
+        if (player.swatting_timer >= total_swat_time) {
+            player.swatting = false;
+            player.swatting_timer = 0.f;
+        }
+    }
+
     //make it so that moving diagonally doesn't go faster:
     if (move != glm::vec2(0.0f)) {
         if (player.jumping) {
@@ -647,6 +693,7 @@ void PlayMode::update(float elapsed) {
         score += 3;
 
         player.swatting = false;
+        player.swatting_timer = 0.f;
     } 
     if (object_collide_name == "Vase") {    // erase on swat
         std::cout << "+++++++ PUSHING Vase +++++++" << std::endl;
@@ -742,10 +789,24 @@ void PlayMode::update(float elapsed) {
     }
 
     if (object_collide_name != "") {
+        bool use_up_vec = is_almost_up_vec(intersection_vec);
+        // printf("use_up_vec:%d\n", use_up_vec);
+        glm::vec3 new_pos;
+        if (use_up_vec) {
+            float top_height = get_top_height(object_collide);
+            new_pos =  player.transform->position;
+            new_pos.z = top_height + 1.00001f;
+        } else {
+            float penetration_depth = player.radius - glm::length(intersection_vec);
+            glm::vec3 offset = ((penetration_depth + 0.000001f) * glm::normalize(intersection_vec));
+            printf("x:%f, y:%f, z:%f\n", offset.x, offset.y, offset.z);
+            new_pos =  player.transform->position + offset;
+        }
+
         // place cat slightly above surface
-        float penetration_depth = player.radius - glm::length(intersection_vec);
+        // float penetration_depth = player.radius - glm::length(intersection_vec);
         // float top_height = get_top_height(object_collide);
-        auto new_pos =  player.transform->position + ((penetration_depth + 0.0001f) * glm::normalize(intersection_vec));
+        // auto new_pos =  player.transform->position + ((penetration_depth + 0.000001f) * glm::normalize(intersection_vec));
         // auto new_pos = prev_player_position;
         // new_pos.z = top_height + 1.00001f;
         player.transform->position = new_pos;
@@ -760,7 +821,9 @@ void PlayMode::update(float elapsed) {
 
     // animate walking
     if (prev_player_position.z == player.transform->position.z) { // potentially walking
-        if (moved) {
+        if (player.swatting) {
+            player_swat.animate(cat_scene, true, elapsed);
+        } else if (moved) {
             player_walking.animate(cat_scene, true, elapsed);
         } else {
             RemoveAllFrames(cat_scene);

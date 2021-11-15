@@ -60,6 +60,7 @@ struct PlayMode : Mode {
         float air_time = 0.0f;
         bool jumping = false;
 		bool swatting = false;
+        float swatting_timer = 0.f;
 		bool on_table = false;
 
         float starting_height;
@@ -79,7 +80,7 @@ struct PlayMode : Mode {
         std::string name;
 
         void animate(Scene &scene, bool enable, float elapsed);
-    } player_walking, player_up_jump, player_down_jump;
+    } player_walking, player_up_jump, player_down_jump, player_swat;
 
 	int score = 0;
 

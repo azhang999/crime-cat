@@ -24,6 +24,7 @@ struct PlayMode : Mode {
     void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
     std::string collide();
+    void GetWalkingFrames();
 
 	//----- game state -----
 
@@ -34,7 +35,7 @@ struct PlayMode : Mode {
 	} left, right, down, up, space, swat;
 
 	//local copy of the game scene (so code can change it during gameplay):
-	Scene player_scene;
+	Scene cat_scene;
     Scene living_room_scene;
     Scene kitchen_scene;
 
@@ -68,6 +69,13 @@ struct PlayMode : Mode {
         // SurfaceType surface = TOP;
         // float ground_level = 0.f;
 	} player;
+
+    struct Walking {
+        std::vector<Scene::Drawable> frames;
+        std::vector<float> frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
+        uint32_t frame_idx = 0;
+        float timer = 0.f;
+    } player_walking;
 
 	int score = 0;
 

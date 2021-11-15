@@ -12,11 +12,11 @@
 #include <random>
 #include <iostream>
 
-GLuint player_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > player_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-    printf("Creating Player Meshes\n");
-	MeshBuffer const *ret = new MeshBuffer(data_path("player.pnct"), data_path("player.boundbox"));
-	player_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+GLuint cat_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > cat_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Cat Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("cat.pnct"), data_path("cat.boundbox"));
+	cat_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
@@ -41,14 +41,14 @@ float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
 }
 
-Load< Scene > player_scene_load(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("player.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = player_meshes->lookup(mesh_name);
+Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("cat.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = cat_meshes->lookup(mesh_name);
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
-		drawable.pipeline.vao = player_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = cat_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -143,18 +143,34 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
 	}
 }
 
+void PlayMode::GetWalkingFrames() {
+    for (uint32_t idx = 0; idx < 5; ++idx) {
+        std::string frame_name = "Walk" + std::to_string(idx);
+        auto walk_iter = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
+                                [frame_name](const Scene::Drawable & elem) { return elem.transform->name == frame_name; });
+        player_walking.frames.push_back(*walk_iter);
+        if (idx != 0) {
+            cat_scene.drawables.erase(walk_iter);
+        }
+    }
+    printf("frames: %lu, times:%lu\n", player_walking.frames.size(), player_walking.frame_times.size());
+    if (player_walking.frames.size() != player_walking.frame_times.size()) throw std::runtime_error("Number of walking frames is incorrect\n");
+}
+
 PlayMode::PlayMode() : 
-    player_scene(*player_scene_load), living_room_scene(*living_room_scene_load), kitchen_scene(*kitchen_scene_load) {
+    cat_scene(*cat_scene_load), living_room_scene(*living_room_scene_load), kitchen_scene(*kitchen_scene_load) {
     
-    GenerateBBox(player_scene, player_meshes);
+    GenerateBBox(cat_scene, cat_meshes);
 
     // remove player capsule from being drawn
-    auto player_iter = find_if(player_scene.drawables.begin(), player_scene.drawables.end(),
+    auto player_iter = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
                                 [](const Scene::Drawable & elem) { return elem.transform->name == "Player"; });
-    player_scene.drawables.erase(player_iter);
+    cat_scene.drawables.erase(player_iter);
 
-    if (player_scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(player_scene.cameras.size()));
-	player.camera = &player_scene.cameras.front();
+    GetWalkingFrames();
+
+    if (cat_scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(cat_scene.cameras.size()));
+	player.camera = &cat_scene.cameras.front();
 
     GenerateBBox(living_room_scene, living_room_meshes);
     GenerateBBox(kitchen_scene, kitchen_meshes);
@@ -472,9 +488,6 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
 std::string PlayMode::collide() {
     for (auto &drawable : living_room_scene.drawables) {
         if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
-        if (drawable.transform->name == "Player") continue;
-        if (drawable.transform->name == "Facing") continue;
-        if (drawable.transform->name == "CatPlayer") continue;
 
         SurfaceType surface;
         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
@@ -483,10 +496,6 @@ std::string PlayMode::collide() {
     }
 
     for (auto &drawable : kitchen_scene.drawables) {
-        if (drawable.transform->name == "Rug") continue; // Rug is kinda blocky
-        if (drawable.transform->name == "Player") continue;
-        if (drawable.transform->name == "Facing") continue;
-        if (drawable.transform->name == "CatPlayer") continue;
 
         SurfaceType surface;
         if (capsule_bbox_collision(player.tip, player.base, player.radius, drawable.transform->bbox, &surface)) {
@@ -524,6 +533,9 @@ void PlayMode::update(float elapsed) {
     glm::vec2 move = glm::vec2(0.0f);
     // if (left.pressed && !right.pressed) move.y = -1.0f;
     // if (!left.pressed && right.pressed) move.y = 1.0f;
+
+    bool moved = down.pressed || up.pressed || left.pressed || right.pressed;
+
     if (down.pressed && !up.pressed) move.x = 1.0f;
     if (!down.pressed && up.pressed) move.x = -1.0f;
     if (!player.jumping && space.pressed)  {
@@ -555,6 +567,20 @@ void PlayMode::update(float elapsed) {
             player.transform->rotation *= glm::angleAxis(3.0f * elapsed, up);
         if (!left.pressed && right.pressed)
             player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
+    }
+
+    // animate walking
+    if (moved) {
+        player_walking.timer += elapsed;
+        if (player_walking.frame_times[player_walking.frame_idx] <= player_walking.timer) {
+            std::string old_frame_name = "Walk" + std::to_string(player_walking.frame_idx);
+            auto old_frame = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
+                                [old_frame_name](const Scene::Drawable & elem) { return elem.transform->name == old_frame_name; });
+            cat_scene.drawables.erase(old_frame);
+            player_walking.frame_idx = (player_walking.frame_idx + 1) % player_walking.frames.size();
+            player_walking.timer = 0.f;
+            cat_scene.drawables.push_back(player_walking.frames[player_walking.frame_idx]);
+        }
     }
 
     std::string object_collide_name = collide();
@@ -865,7 +891,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
 
-	player_scene.draw(*player.camera);
+	cat_scene.draw(*player.camera);
     living_room_scene.draw(*player.camera);
     kitchen_scene.draw(*player.camera);
 

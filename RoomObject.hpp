@@ -57,7 +57,7 @@ class RoomObject {
 		float pen_depth = 0.f;
 	
 		// ----- Collision resolution -----
-		Scene::Drawable *reaction_drawable;
+		std::vector<Scene::Drawable> reaction_drawables;
 
 		// ***** Falling objects *****
 		bool is_falling = false;

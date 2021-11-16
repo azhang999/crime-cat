@@ -118,5 +118,8 @@ struct PlayMode : Mode {
 	float phi = ((float)M_PI)/2.f;
 	float camera_radius = 10.0f;
 
+    float game_timer = 5.0f * 60.f; // in seconds
+    bool game_over = false;
+
     Scene::Transform *wall1, *wall2, *wall3, *wall4;
 };

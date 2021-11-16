@@ -38,6 +38,7 @@ class RoomObject {
 		Scene::Transform *transform = nullptr;
 		glm::vec3 orig_bbox[8];
 		glm::vec3 orig_scale;
+		glm::vec3 prev_position;
 
 		// ----- Capsule properties -----
 		struct Capsule {
@@ -56,7 +57,7 @@ class RoomObject {
 		float pen_depth = 0.f;
 	
 		// ----- Collision resolution -----
-		glm::vec3 prev_position;
+		Scene::Drawable *reaction_drawable;
 
 		// ***** Falling objects *****
 		bool is_falling = false;

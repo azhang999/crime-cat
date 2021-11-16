@@ -216,6 +216,7 @@ void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
 }
 
 void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
+    std::vector<RoomObject> interesting_collisions;
 
     if (room_type == RoomType::LivingRoom) {
         float rug_height = 0.0f;
@@ -223,6 +224,11 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
 
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
+
+            if ((drawable.transform->name).find("Collide") != std::string::npos) {
+                std::cout << "COLLISION REACTION: " << drawable.transform->name << std::endl;
+                continue;       // Save these in a second pass
+            }
             
             CollisionType type = CollisionType::None;  
             if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
@@ -233,6 +239,8 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;
 
             objects.push_back( RoomObject(drawable.transform, type) );
+
+            interesting_collisions.push_back(objects.back());
 
             if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
             if (drawable.transform->name == "SideTable") {
@@ -270,6 +278,23 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             if (drawable.transform->name == "Counter") {
                 counter_transform = drawable.transform;
             }
+        }
+    }
+
+    // Applies for all rooms
+    for (auto &obj: interesting_collisions) {
+        // Lookup after-collision drawable
+        if ((obj.collision_type == CollisionType::Steal) 
+            || (obj.collision_type == CollisionType::KnockOver) 
+            || (obj.collision_type == CollisionType::Destroy)) {
+            
+            auto obj_name = obj.name;
+            auto collided_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                    [obj_name](const Scene::Drawable &elem) { return elem.transform->name == (obj_name + " Collided"); });
+            if (collided_iter == scene.drawables.end()) std::cerr << "ERROR: Could not find post-collision resolution mesh associated with " << obj_name << std::endl;
+
+            Scene::Drawable &collided_obj = *(collided_iter);
+            obj.reaction_drawable = &collided_obj;
         }
     }
 }

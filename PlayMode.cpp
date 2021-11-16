@@ -223,6 +223,9 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
 
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
+            if ((drawable.transform->name).find("Collide") != std::string::npos) {
+                continue;       // Save these in a second pass
+            }
             
             CollisionType type = CollisionType::None;  
             if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
@@ -254,22 +257,79 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         vase_obj.end_height   = rug_height;
         vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
         vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
-
-        // ----------- Save floor -----------
     }
+
     else if (room_type == RoomType::Kitchen) {
+        float floor_height = 0.0f;
+        float island_x_min = 0, island_x_max = 0, island_y_min = 0, island_y_max = 0;
+
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
+            if ((drawable.transform->name).find("Collide") != std::string::npos) {
+                continue;       // Save these in a second pass
+            }
             
             CollisionType type = CollisionType::None;
+            if (drawable.transform->name == "Stove Knob") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.001") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.002") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.003") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Faucet") type = CollisionType::Destroy;
+            else if (drawable.transform->name == "Plate") type = CollisionType::Destroy;              // TODO: eventually push-offable
+            else if (drawable.transform->name == "Plate.001") type = CollisionType::Destroy;          // TODO: eventually push-offable
+            else if (drawable.transform->name == "Spoon") type = CollisionType::Steal;
+            else if (drawable.transform->name == "Spoon.001") type = CollisionType::Steal;
+            else if (drawable.transform->name == "Pan") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Pan.001") type = CollisionType::KnockOver;
+
             objects.push_back( RoomObject(drawable.transform, type) );
 
             if (drawable.transform->name == "Floor.001") {
+                floor_height = objects.back().capsule.tip.z;
                 kitchen_floor = drawable.transform;
             }
             if (drawable.transform->name == "Counter") {
                 counter_transform = drawable.transform;
             }
+            if (drawable.transform->name == "Island.001") {
+                island_x_min = drawable.transform->bbox[1].x;
+                island_x_max = drawable.transform->bbox[5].x;
+                island_y_min = drawable.transform->bbox[1].y;
+                island_y_max = drawable.transform->bbox[2].y;
+            }
+        }
+
+        // ----- Search for FALLING objects to set start/end heights -----
+        auto plate1_iter = find_if(objects.begin(), objects.end(),
+                                [](const RoomObject &elem) { return elem.transform->name == "Plate"; });
+        RoomObject &plate1 = *(plate1_iter);
+        plate1.start_height = plate1.transform->position.z;
+        plate1.end_height   = floor_height;
+        plate1.x_min = island_x_min; plate1.x_max = island_x_max;
+        plate1.y_min = island_y_min; plate1.y_max = island_y_max;
+
+        auto plate2_iter = find_if(objects.begin(), objects.end(),
+                                [](const RoomObject &elem) { return elem.transform->name == "Plate.001"; });
+        RoomObject &plate2 = *(plate2_iter);
+        plate2.start_height = plate2.transform->position.z;
+        plate2.end_height   = floor_height;
+        plate2.x_min = island_x_min; plate2.x_max = island_x_max;
+        plate2.y_min = island_y_min; plate2.y_max = island_y_max;
+    }
+
+    // Applies for all rooms
+    for (auto &obj: objects) {
+        // Lookup after-collision drawable
+        if ((obj.collision_type == CollisionType::PushOff) 
+            || (obj.collision_type == CollisionType::KnockOver) 
+            || (obj.collision_type == CollisionType::Destroy)) {
+            
+            auto obj_name = obj.name;
+            auto collided_iter = find_if(scene.drawables.begin(), scene.drawables.end(),
+                    [obj_name](const Scene::Drawable &elem) { return elem.transform->name == (obj_name + " Collided"); });
+            if (collided_iter == scene.drawables.end()) std::cerr << "ERROR: Could not find post-collision resolution mesh associated with " << obj_name << std::endl;
+            obj.reaction_drawables.push_back(*collided_iter);
+            scene.drawables.erase(collided_iter);   // Safe to delete reaction drawables now
         }
     }
 }
@@ -567,6 +627,36 @@ void PlayMode::update(float elapsed) {
     // #####################################################################
     //                          Handle Collisions
     // #####################################################################
+    auto switchout_mesh = [&](RoomObject &resolved_obj) {        
+        // std::cout << "===> Pos-collision, adding back " << resolved_obj.reaction_drawables[0].transform->name << std::endl;
+
+        // First delete resolved object's mesh
+        // TODO: use RemoveframeByName when current_scene is being used to differentiate collisions between rooms
+        bool is_livingroom = false;
+        if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
+            if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
+                std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+            }
+            else is_livingroom = false;
+        }
+        else is_livingroom = true;
+
+        // Then add drawable of the resulting mesh
+        if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+    };
+
+    auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
+        // Save current bounding box
+        for (auto i = 0; i < 8; i++) {
+            removed_obj.orig_bbox[i] = removed_obj.transform->bbox[i];
+            removed_obj.transform->bbox[i] = glm::vec3(-10000);
+        }
+        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
+        removed_obj.capsule.tip = glm::vec3(-10000);
+        removed_obj.capsule.base = glm::vec3(-10000);
+    };
+
 
     auto object_collide = collide();
     std::string object_collide_name = "";
@@ -591,16 +681,8 @@ void PlayMode::update(float elapsed) {
         // Save current position
         collision_obj.prev_position = collision_obj.transform->position;
         collision_obj.transform->position = glm::vec3(-10000);
-        // Save current bounding box
-        for (auto i = 0; i < 8; i++) {
-            collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i];
-            collision_obj.transform->bbox[i] = glm::vec3(-10000);
-        }
-        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
-        collision_obj.capsule.tip = glm::vec3(-10000);
-        collision_obj.capsule.base = glm::vec3(-10000);
+        pseudo_remove_bbox(collision_obj);
         
-
         // std::cout << "Scale before: " << glm::to_string(collision_obj.orig_scale) << ", scale after: " << glm::to_string(collision_obj.transform->scale) << std::endl;
 
         // TODO: debug this if object needs to be deleted
@@ -614,16 +696,20 @@ void PlayMode::update(float elapsed) {
     }
     // --------- Destroy object ---------
     else if (player.swatting && collision_obj.collision_type == CollisionType::Destroy && !collision_obj.done) {
-        // TODO: post-collision mesh-switchout
         score += 5;
         collision_obj.done = true;
         player.swatting = false;
+
+        switchout_mesh(collision_obj);
+        pseudo_remove_bbox(collision_obj);
     }
     // --------- Knock over object ---------
     else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
-        // TODO: post-collision mesh-switchout
         score += 3;
         collision_obj.done = true;
+
+        switchout_mesh(collision_obj);
+        pseudo_remove_bbox(collision_obj);
     }
     // --------- Push object off of surface ---------
     else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
@@ -684,14 +770,6 @@ void PlayMode::update(float elapsed) {
         player.base.z -= 1.0f;
     }
 
-    // if (need_to_erase) {
-    //     (*current_objects).erase(collision_obj_iter);
-    //     std::cout << "REMAINING OBJECTS: " << std::endl;
-    //     for (auto &remaining_obj : *(current_objects)) {
-    //         std::cout << "\t" << remaining_obj.name << std::endl;
-    //     }
-    // }
-
     // ##################### Resolve remaining collision behavior #####################
     for (auto &obj : *current_objects) {
         if (obj.collision_type == CollisionType::PushOff) {
@@ -721,6 +799,8 @@ void PlayMode::update(float elapsed) {
                     score += 5;
                     obj.collided = true;  // prevents user from gaining more points
                     obj.done = true;
+
+                    switchout_mesh(obj);
                 }
                 else {
                     obj.transform->position.z = height;

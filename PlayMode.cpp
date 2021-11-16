@@ -275,8 +275,8 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             else if (drawable.transform->name == "Stove Knob.002") type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Stove Knob.003") type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Faucet") type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Plate") type = CollisionType::PushOff;              //
-            else if (drawable.transform->name == "Plate.001") type = CollisionType::PushOff;        //
+            else if (drawable.transform->name == "Plate") type = CollisionType::Destroy;              // TODO: eventually push-offable
+            else if (drawable.transform->name == "Plate.001") type = CollisionType::Destroy;          // TODO: eventually push-offable
             else if (drawable.transform->name == "Spoon") type = CollisionType::Steal;
             else if (drawable.transform->name == "Spoon.001") type = CollisionType::Steal;
             else if (drawable.transform->name == "Pan") type = CollisionType::KnockOver;
@@ -638,6 +638,17 @@ void PlayMode::update(float elapsed) {
         else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
     };
 
+    auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
+        // Save current bounding box
+        for (auto i = 0; i < 8; i++) {
+            removed_obj.orig_bbox[i] = removed_obj.transform->bbox[i];
+            removed_obj.transform->bbox[i] = glm::vec3(-10000);
+        }
+        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
+        removed_obj.capsule.tip = glm::vec3(-10000);
+        removed_obj.capsule.base = glm::vec3(-10000);
+    };
+
 
     auto object_collide = collide();
     std::string object_collide_name = "";
@@ -662,14 +673,7 @@ void PlayMode::update(float elapsed) {
         // Save current position
         collision_obj.prev_position = collision_obj.transform->position;
         collision_obj.transform->position = glm::vec3(-10000);
-        // Save current bounding box
-        for (auto i = 0; i < 8; i++) {
-            collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i];
-            collision_obj.transform->bbox[i] = glm::vec3(-10000);
-        }
-        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
-        collision_obj.capsule.tip = glm::vec3(-10000);
-        collision_obj.capsule.base = glm::vec3(-10000);
+        pseudo_remove_bbox(collision_obj);
         
         // std::cout << "Scale before: " << glm::to_string(collision_obj.orig_scale) << ", scale after: " << glm::to_string(collision_obj.transform->scale) << std::endl;
 
@@ -689,6 +693,7 @@ void PlayMode::update(float elapsed) {
         player.swatting = false;
 
         switchout_mesh(collision_obj);
+        pseudo_remove_bbox(collision_obj);
     }
     // --------- Knock over object ---------
     else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
@@ -696,6 +701,7 @@ void PlayMode::update(float elapsed) {
         collision_obj.done = true;
 
         switchout_mesh(collision_obj);
+        pseudo_remove_bbox(collision_obj);
     }
     // --------- Push object off of surface ---------
     else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {

@@ -16,6 +16,7 @@ Sources: (TODO: list a source URL for any assets you did not create yourself. Ma
 
 We used music from the following sources:
 - ["Blippy Trance"](https://freepd.com/misc.php)
+- [Ceramic shattering sound](https://freesound.org/people/m_delaparra/sounds/338018/)
 
 This game was built with [NEST](NEST.md).
 

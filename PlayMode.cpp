@@ -502,6 +502,14 @@ Scene::Transform *PlayMode::collide() {
 }
 
 void PlayMode::update(float elapsed) {
+    if (game_over) return;
+
+    game_timer -= elapsed;
+    if (game_timer <= 0.f) {
+        game_over = true;
+        game_timer = 0.f;
+    }
+
     glm::vec3 prev_player_position = player.transform->position;
 
 	//move player:
@@ -956,12 +964,19 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+        std::string message;
+        if (game_over) {
+            message = "Your Owner Came Back, GAME OVER!";
+        } else {
+            message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
+        }
+
+		lines.draw_text(message,
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		lines.draw_text(message,
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));

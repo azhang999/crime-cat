@@ -209,13 +209,17 @@ bool capsule_rectagle_collision(glm::vec3 tip, glm::vec3 base, float radius,
         bool use_up1 = is_almost_up_vec(pen_normal1);
         if (use_up1) {
             *pen_normal = pen_normal1;
+            *pen_depth = pen_depth1;
         } else {
             *pen_normal = pen_normal2;
+            *pen_depth = pen_depth2;
         }
     } else if (collide1) {
         *pen_normal = pen_normal1;
+        *pen_depth = pen_depth1;
     } else if (collide2) {
         *pen_normal = pen_normal2;
+        *pen_depth = pen_depth2;
     }
     return collide1 || collide2;
 }

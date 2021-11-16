@@ -87,9 +87,12 @@ Load< Scene > kitchen_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-
 Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("blippy_trance.wav"));
+});
+
+Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("shattering.wav"));
 });
 
 
@@ -253,6 +256,10 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             if (drawable.transform->name == "Floor") {
                 living_room_floor = drawable.transform;
             }
+            if (drawable.transform->name == "Vase") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&shattering);
+            }
         }
 
         // ----- Search for FALLING objects to set start/end heights -----
@@ -302,6 +309,14 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 island_x_max = drawable.transform->bbox[5].x;
                 island_y_min = drawable.transform->bbox[1].y;
                 island_y_max = drawable.transform->bbox[2].y;
+            }
+            if (drawable.transform->name == "Plate") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&shattering);
+            }
+            if (drawable.transform->name == "Plate.001") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&shattering);
             }
         }
 
@@ -711,6 +726,10 @@ void PlayMode::update(float elapsed) {
 
         switchout_mesh(collision_obj);
         pseudo_remove_bbox(collision_obj);
+
+        if(collision_obj.has_sound) {
+            Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+        }
     }
     // --------- Knock over object ---------
     else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
@@ -810,6 +829,9 @@ void PlayMode::update(float elapsed) {
                     obj.done = true;
 
                     switchout_mesh(obj);
+                    if(collision_obj.has_sound) {
+                        Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                    }
                 }
                 else {
                     obj.transform->position.z = height;

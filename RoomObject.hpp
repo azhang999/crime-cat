@@ -1,6 +1,8 @@
 
 #pragma once
 #include "Scene.hpp"
+#include "Load.hpp"
+#include "Sound.hpp"
 #include <glm/glm.hpp>
 
 enum SurfaceType {TOP, BOT, FRONT, BACK, LEFT, RIGHT};
@@ -58,6 +60,8 @@ class RoomObject {
 	
 		// ----- Collision resolution -----
 		std::vector<Scene::Drawable> reaction_drawables;
+		bool has_sound = false;
+		std::vector<Load<Sound::Sample> *> samples;
 
 		// ***** Falling objects *****
 		bool is_falling = false;

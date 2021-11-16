@@ -1,6 +1,7 @@
 #include "Mode.hpp"
 
 #include "Scene.hpp"
+#include "Load.hpp"
 #include "Sound.hpp"
 #include "RoomObject.hpp"
 #include "Collision.hpp"

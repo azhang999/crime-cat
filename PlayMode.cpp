@@ -223,9 +223,7 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
 
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
-
             if ((drawable.transform->name).find("Collide") != std::string::npos) {
-                // std::cout << "COLLISION REACTION: " << drawable.transform->name << std::endl;
                 continue;       // Save these in a second pass
             }
             
@@ -259,23 +257,64 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         vase_obj.end_height   = rug_height;
         vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
         vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
-
-        // ----------- Save floor -----------
     }
+
     else if (room_type == RoomType::Kitchen) {
+        float floor_height = 0.0f;
+        float island_x_min = 0, island_x_max = 0, island_y_min = 0, island_y_max = 0;
+
         for (auto &drawable : scene.drawables) {
             if (drawable.transform->name == "Player") continue;
+            if ((drawable.transform->name).find("Collide") != std::string::npos) {
+                continue;       // Save these in a second pass
+            }
             
             CollisionType type = CollisionType::None;
+            if (drawable.transform->name == "Stove Knob") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.001") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.002") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Stove Knob.003") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Faucet") type = CollisionType::Destroy;
+            else if (drawable.transform->name == "Plate") type = CollisionType::PushOff;              //
+            else if (drawable.transform->name == "Plate.001") type = CollisionType::PushOff;        //
+            else if (drawable.transform->name == "Spoon") type = CollisionType::Steal;
+            else if (drawable.transform->name == "Spoon.001") type = CollisionType::Steal;
+            else if (drawable.transform->name == "Pan") type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Pan.001") type = CollisionType::KnockOver;
+
             objects.push_back( RoomObject(drawable.transform, type) );
 
             if (drawable.transform->name == "Floor.001") {
+                floor_height = objects.back().capsule.tip.z;
                 kitchen_floor = drawable.transform;
             }
             if (drawable.transform->name == "Counter") {
                 counter_transform = drawable.transform;
             }
+            if (drawable.transform->name == "Island.001") {
+                island_x_min = drawable.transform->bbox[1].x;
+                island_x_max = drawable.transform->bbox[5].x;
+                island_y_min = drawable.transform->bbox[1].y;
+                island_y_max = drawable.transform->bbox[2].y;
+            }
         }
+
+        // ----- Search for FALLING objects to set start/end heights -----
+        auto plate1_iter = find_if(objects.begin(), objects.end(),
+                                [](const RoomObject &elem) { return elem.transform->name == "Plate"; });
+        RoomObject &plate1 = *(plate1_iter);
+        plate1.start_height = plate1.transform->position.z;
+        plate1.end_height   = floor_height;
+        plate1.x_min = island_x_min; plate1.x_max = island_x_max;
+        plate1.y_min = island_y_min; plate1.y_max = island_y_max;
+
+        auto plate2_iter = find_if(objects.begin(), objects.end(),
+                                [](const RoomObject &elem) { return elem.transform->name == "Plate.001"; });
+        RoomObject &plate2 = *(plate2_iter);
+        plate2.start_height = plate2.transform->position.z;
+        plate2.end_height   = floor_height;
+        plate2.x_min = island_x_min; plate2.x_max = island_x_max;
+        plate2.y_min = island_y_min; plate2.y_max = island_y_max;
     }
 
     // Applies for all rooms

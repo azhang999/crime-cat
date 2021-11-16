@@ -121,5 +121,7 @@ struct PlayMode : Mode {
     float game_timer = 5.0f * 60.f; // in seconds
     bool game_over = false;
 
+	std::shared_ptr<Sound::PlayingSample> bg_loop;
+
     Scene::Transform *wall1, *wall2, *wall3, *wall4;
 };

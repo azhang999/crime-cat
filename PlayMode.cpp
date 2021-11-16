@@ -87,6 +87,12 @@ Load< Scene > kitchen_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
+
+Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("blippy_trance.wav"));
+});
+
+
 // TODO: find a song sample
 Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("dusty-floor.opus"));
@@ -383,6 +389,9 @@ PlayMode::PlayMode() :
 
     // ----- Start in living room -----
     switch_rooms(RoomType::LivingRoom);
+
+    // ------------- Start background music! ---------------
+    bg_loop = Sound::loop_3D(*bg_music, 1.0f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {

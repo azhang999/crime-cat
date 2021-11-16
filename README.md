@@ -14,5 +14,8 @@ How To Play:
 
 Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
 
+We used music from the following sources:
+- ["Blippy Trance"](https://freepd.com/misc.php)
+
 This game was built with [NEST](NEST.md).
 

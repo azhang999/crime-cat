@@ -789,13 +789,34 @@ void PlayMode::update(float elapsed) {
             }
         }
     }
-    // --------- * No collision occured * ---------
-    else if (object_collide_name != "") { // undo movement
-        player.transform->position = prev_player_position;
-        player.tip = prev_player_position;
-        player.tip.z += 1.0f;
-        player.base = prev_player_position;
-        player.base.z -= 1.0f;
+    else if (object_collide_name != "") { // Collision occured against other objects
+        // Undo movement (fixed location)
+        // player.transform->position = prev_player_position;
+        // player.tip = player.transform->position;
+        // player.tip.z += 1.0f;
+        // player.base = player.transform->position;
+        // player.base.z -= 1.0f;
+
+        // Instead of undoing the movement, let it slide
+        glm::vec3 offset = (player.transform->position - prev_player_position);
+        glm::vec3 player_velocity = offset / elapsed;
+        float player_velocity_length = glm::length(player_velocity);
+        player_velocity = glm::normalize(player_velocity);
+
+        if (std::isnan(player_velocity.x) && !std::isnan(player_velocity.y) && !std::isnan(player_velocity.z)) {
+            // Fix velocity
+            glm::vec3 undesired_motion = collision_obj.pen_dir * glm::dot(collision_obj.pen_dir, player_velocity);
+            glm::vec3 desired_motion = player_velocity - undesired_motion;
+            player_velocity = player_velocity_length * desired_motion;
+
+            // Re-do player movement with displacement vector calculated using this new velocity
+            glm::vec3 displacement = player_velocity * elapsed;
+            player.transform->position = prev_player_position + displacement;
+            player.tip = player.transform->position;
+            player.tip.z += 1.0f;
+            player.base = player.transform->position;
+            player.base.z -= 1.0f;
+        }
     }
 
     // ##################### Resolve remaining collision behavior #####################

@@ -5,6 +5,7 @@
 #include "Sound.hpp"
 #include "RoomObject.hpp"
 #include "Collision.hpp"
+#include "Shadow.hpp"
 #include "Mesh.hpp"
 #include "Load.hpp"
 
@@ -99,7 +100,32 @@ struct PlayMode : Mode {
         // Scene::Transform *ground = nullptr;
         // SurfaceType surface = TOP;
         // float ground_level = 0.f;
+
+		void update_position(glm::vec3 new_pos) {
+			// Update mesh position
+			transform->position = new_pos;
+
+			// Update capsule
+			transform->position = new_pos;
+			tip = new_pos;
+			tip.z += 1.0f;
+			base = new_pos;
+			base.z -= 1.0f;
+		}
 	} player;
+
+	struct Shadow {
+		void update_position();
+
+		Scene::Drawable *drawable;
+		// glm::vec3 old_surface_pos = glm::vec3(0);
+		glm::vec3 surface_pos = glm::vec3(0);
+
+		void update_position(glm::vec3 player_pos, float *surface_z) {
+			drawable->transform->position = player_pos;
+			if (surface_z) drawable->transform->position.z = *(surface_z);
+		}
+	} shadow;
 
     glm::vec3 penetration_normal;
     float penetration_depth;

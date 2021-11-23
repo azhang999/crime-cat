@@ -123,7 +123,7 @@ struct PlayMode : Mode {
 
 		void update_position(glm::vec3 player_pos, float *surface_z) {
 			drawable->transform->position = player_pos;
-			if (surface_z) drawable->transform->position.z = *(surface_z);
+			if (surface_z) drawable->transform->position.z = *(surface_z) + 0.1f;
 		}
 	} shadow;
 

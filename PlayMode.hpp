@@ -14,6 +14,7 @@
 #include <vector>
 #include <deque>
 #include <iostream>
+#include <limits>
 
 
 struct PlayMode : Mode {
@@ -37,6 +38,7 @@ struct PlayMode : Mode {
 
 	void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
+	float get_surface_below_height();
 	// void check_room();
 	// std::string floor_collide(); //RoomType floor_collide();
 
@@ -121,9 +123,11 @@ struct PlayMode : Mode {
 		// glm::vec3 old_surface_pos = glm::vec3(0);
 		glm::vec3 surface_pos = glm::vec3(0);
 
-		void update_position(glm::vec3 player_pos, float *surface_z) {
-			drawable->transform->position = player_pos;
-			if (surface_z) drawable->transform->position.z = *(surface_z) + 0.1f;
+		void update_position(glm::vec3 new_pos, float height) {
+			// drawable->transform->position = player_pos;
+			// if (surface_z) drawable->transform->position.z = *(surface_z) + 0.1f;
+			drawable->transform->position = new_pos;
+			drawable->transform->position.z = height;
 		}
 	} shadow;
 

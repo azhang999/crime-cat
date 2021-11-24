@@ -457,11 +457,12 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             return true;
         }
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-        swat.pressed = true;
 		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
 			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
+		} else {
+            swat.pressed = true;
+        }
+		return true;
     } else if (evt.type == SDL_MOUSEBUTTONUP) {
         swat.pressed = false;
         return true;

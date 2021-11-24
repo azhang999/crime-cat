@@ -1,6 +1,7 @@
 #include "PlayMode.hpp"
 
 #include "LitColorTextureProgram.hpp"
+#include "BlobShadowTextureProgram.hpp"
 
 #include "DrawLines.hpp"
 #include "gl_errors.hpp"
@@ -21,9 +22,11 @@ Load< MeshBuffer > cat_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 });
 
 GLuint living_room_meshes_for_lit_color_texture_program = 0;
+GLuint living_room_meshes_for_blob_shadow_texture_program = 0;
 Load< MeshBuffer > living_room_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"), data_path("living_room.boundbox"));
 	living_room_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+    living_room_meshes_for_blob_shadow_texture_program = ret->make_vao_for_program(blob_shadow_texture_program->program);
 	return ret;
 });
 
@@ -57,17 +60,22 @@ Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
 
 Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("living_room.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-        // printf("Mesh Name: %s\n", mesh_name.c_str());
 		Mesh const &mesh = living_room_meshes->lookup(mesh_name);
+
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
-
-		drawable.pipeline = lit_color_texture_program_pipeline;
-		drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
-		drawable.pipeline.type = mesh.type;
+        
+        if (transform->name == "CatShadow") {
+            drawable.pipeline = blob_shadow_texture_program_pipeline;
+            drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+        }
+        else {
+            drawable.pipeline = lit_color_texture_program_pipeline;
+            drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
+        }
+        drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
-
 	});
 });
 
@@ -529,23 +537,16 @@ PlayMode::PlayMode() :
     switch_rooms(RoomType::LivingRoom);
 
     // Get shadow transform 
-    std::cout << "------------ Setting up blob shadow ------------" << std::endl; 
     auto shadow_iter = find_if(living_room_scene.drawables.begin(), living_room_scene.drawables.end(),
                                         [](const Scene::Drawable &elem) { return elem.transform->name == "CatShadow"; });
     if (shadow_iter != living_room_scene.drawables.end()) {
-        std::cout << "Found shadow transform" << std::endl;
         shadow.drawable = &(*shadow_iter);
-        std::cout << "Verifying this saved: " << shadow.drawable->transform->name << std::endl;
-        std::cout << "Storing this at initial cat position " << glm::to_string(player.transform->position) << std::endl;
         shadow.drawable->transform->position = living_room_floor->position;
-        std::cout << "Storing this at initial cat position " << glm::to_string(shadow.drawable->transform->position) << std::endl;
     }
     // AddFrame(cat_scene, *(shadow.drawable));
-    std::cout << "------------------------------------------------" << std::endl; 
-
 
     // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 1.0f, glm::vec3(0), 5.0f);
+    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -1120,12 +1121,23 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
+    glUseProgram(blob_shadow_texture_program->program);
+	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
+	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+	glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+	glUseProgram(0);
+
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
+
+    // Enable blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
     living_room_scene.draw(*player.camera);

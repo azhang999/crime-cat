@@ -5,7 +5,6 @@
 #include "Sound.hpp"
 #include "RoomObject.hpp"
 #include "Collision.hpp"
-#include "Shadow.hpp"
 #include "Mesh.hpp"
 #include "Load.hpp"
 

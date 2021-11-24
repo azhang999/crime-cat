@@ -37,7 +37,7 @@ struct PlayMode : Mode {
 
 	void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
-	float get_surface_below_height();
+	float get_surface_below_height(float &closest_dist);
 	// void check_room();
 	// std::string floor_collide(); //RoomType floor_collide();
 
@@ -116,17 +116,13 @@ struct PlayMode : Mode {
 	} player;
 
 	struct Shadow {
-		void update_position();
-
 		Scene::Drawable *drawable;
-		// glm::vec3 old_surface_pos = glm::vec3(0);
-		glm::vec3 surface_pos = glm::vec3(0);
+		float closest_dist = 0;
 
-		void update_position(glm::vec3 new_pos, float height) {
-			// drawable->transform->position = player_pos;
-			// if (surface_z) drawable->transform->position.z = *(surface_z) + 0.1f;
+		void update_position(glm::vec3 new_pos, float height, float dist) {
 			drawable->transform->position = new_pos;
-			drawable->transform->position.z = height;
+			drawable->transform->position.z = height + 0.001f;
+			closest_dist = dist;
 		}
 	} shadow;
 

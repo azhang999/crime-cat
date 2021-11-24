@@ -213,9 +213,9 @@ bool shadow_intersect(Scene::Transform *transform, glm::vec3 cat_pos, glm::vec3 
     return true;
 }
 
-float PlayMode::get_surface_below_height() {
+float PlayMode::get_surface_below_height(float &closest_dist) {
     float height = player.base.z;
-    float closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
+    closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
 
     switch_rooms(RoomType::LivingRoom);
     for (auto obj : *current_objects) {
@@ -1034,13 +1034,6 @@ void PlayMode::update(float elapsed) {
             new_pos =  player.transform->position + offset;
         }
 
-        // glm::vec3 intersect = glm::vec3(0);
-        // if (raycast_intersect(object_collide, player.base, intersect)) {
-        //     std::cout << "NEW POS = " << glm::to_string(new_pos) << ", penetration = " << glm::to_string(intersect) << std::endl;
-        // }
-
-        
-
         // place cat slightly above surface
         // float penetration_depth = player.radius - glm::length(intersection_vec);
         // float top_height = get_top_height(object_collide);
@@ -1056,7 +1049,6 @@ void PlayMode::update(float elapsed) {
         player.update_position(new_pos);
         // shadow.update_position(player.base, &(top_height));
 
-
         player.jumping = false;
         player.air_time = 0.f;
         player.starting_height = player.transform->position.z;
@@ -1064,7 +1056,9 @@ void PlayMode::update(float elapsed) {
 
     // Update shadow position
     {
-        shadow.update_position(player.base, get_surface_below_height());
+        float closest_dist = 0;
+        float height = get_surface_below_height(closest_dist);
+        shadow.update_position(player.base, height, closest_dist);
     }
 
 
@@ -1121,10 +1115,13 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
+    std::cout << shadow.closest_dist << std::endl;
+
     glUseProgram(blob_shadow_texture_program->program);
 	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
 	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
 	glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+    glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
 	glUseProgram(0);
 
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -1135,7 +1132,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
 
-    // Enable blending
+    // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

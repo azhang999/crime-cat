@@ -14,7 +14,8 @@ Load< BlobShadowTextureProgram > blob_shadow_texture_program(LoadTagEarly, []() 
 	blob_shadow_texture_program_pipeline.OBJECT_TO_CLIP_mat4 = ret->OBJECT_TO_CLIP_mat4;
 	blob_shadow_texture_program_pipeline.OBJECT_TO_LIGHT_mat4x3 = ret->OBJECT_TO_LIGHT_mat4x3;
 	blob_shadow_texture_program_pipeline.NORMAL_TO_LIGHT_mat3 = ret->NORMAL_TO_LIGHT_mat3;
-
+	blob_shadow_texture_program_pipeline.DEPTH_float = ret->DEPTH_float;
+	
 	/* This will be used later if/when we build a light loop into the Scene:
 	blob_shadow_texture_program_pipeline.LIGHT_TYPE_int = ret->LIGHT_TYPE_int;
 	blob_shadow_texture_program_pipeline.LIGHT_LOCATION_vec3 = ret->LIGHT_LOCATION_vec3;
@@ -51,6 +52,7 @@ BlobShadowTextureProgram::BlobShadowTextureProgram() {
 		"uniform mat4 OBJECT_TO_CLIP;\n"
 		"uniform mat4x3 OBJECT_TO_LIGHT;\n"
 		"uniform mat3 NORMAL_TO_LIGHT;\n"
+		"uniform float DEPTH;\n"
 		"in vec4 Position;\n"
 		"in vec3 Normal;\n"
 		"in vec4 Color;\n"
@@ -64,7 +66,7 @@ BlobShadowTextureProgram::BlobShadowTextureProgram() {
 		"	position = OBJECT_TO_LIGHT * Position;\n"
 		"	normal = NORMAL_TO_LIGHT * Normal;\n"
 		"	color = Color;\n"
-		"	color.a = 0.5;\n"
+		"	color.a = 0.25;\n"
 		"	texCoord = TexCoord;\n"
 		"}\n"
 	,
@@ -120,14 +122,14 @@ BlobShadowTextureProgram::BlobShadowTextureProgram() {
 	OBJECT_TO_CLIP_mat4 = glGetUniformLocation(program, "OBJECT_TO_CLIP");
 	OBJECT_TO_LIGHT_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
 	NORMAL_TO_LIGHT_mat3 = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
+	DEPTH_float = glGetUniformLocation(program, "DEPTH");
 
 	LIGHT_TYPE_int = glGetUniformLocation(program, "LIGHT_TYPE");
 	LIGHT_LOCATION_vec3 = glGetUniformLocation(program, "LIGHT_LOCATION");
 	LIGHT_DIRECTION_vec3 = glGetUniformLocation(program, "LIGHT_DIRECTION");
 	LIGHT_ENERGY_vec3 = glGetUniformLocation(program, "LIGHT_ENERGY");
 	LIGHT_CUTOFF_float = glGetUniformLocation(program, "LIGHT_CUTOFF");
-
-
+	
 	GLuint TEX_sampler2D = glGetUniformLocation(program, "TEX");
 
 	//set TEX to always refer to texture binding zero:

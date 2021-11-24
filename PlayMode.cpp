@@ -438,10 +438,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             space.downs += 1;
             space.pressed = true;
             return true;
-        } else if (evt.key.keysym.sym == SDLK_g) {
-            swat.downs += 1;
-            swat.pressed = true;
-            return true;
         }
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
@@ -459,15 +455,16 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_SPACE) {
             space.pressed = false;
             return true;
-        } else if (evt.key.keysym.sym == SDLK_g) {
-            swat.pressed = false;
-            return true;
         }
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
+        swat.pressed = true;
 		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
 			SDL_SetRelativeMouseMode(SDL_TRUE);
 			return true;
 		}
+    } else if (evt.type == SDL_MOUSEBUTTONUP) {
+        swat.pressed = false;
+        return true;
 	} else if (evt.type == SDL_MOUSEMOTION) {
 		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
 			glm::vec2 motion = glm::vec2(

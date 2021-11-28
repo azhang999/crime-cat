@@ -95,10 +95,6 @@ Load< Scene > kitchen_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("blippy_trance.wav"));
-});
-
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));
 });
@@ -544,9 +540,6 @@ PlayMode::PlayMode() :
         shadow.drawable->transform->position = living_room_floor->position;
     }
     // AddFrame(cat_scene, *(shadow.drawable));
-
-    // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {

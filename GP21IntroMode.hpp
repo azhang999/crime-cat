@@ -11,11 +11,9 @@
 #include "GL.hpp"
 
 #include <memory>
+#include <functional>
 
 struct GP21IntroMode : Mode {
-	//pass a pointer to the mode that will be invoked when this one over / skipped:
-	// GP21IntroMode(std::shared_ptr< Mode > const &next_mode);
-
 	// Passes a function to be run when this mode is finished/skipped
 	// Recommended by Jim McCann, as a modification of https://raw.githubusercontent.com/15-466/15-466-f21-intro/main/GP21IntroMode.hpp
 	GP21IntroMode(std::function< void() > on_finish);

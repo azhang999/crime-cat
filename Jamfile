@@ -138,6 +138,7 @@ if $(OS) = NT { #Windows
 GAME_NAMES =
 	GP21IntroMode
 	SplashMode
+	InstructMode
 	PlayMode
 	main
 	LitColorTextureProgram

@@ -1,4 +1,4 @@
-#include "SplashMode.hpp"
+#include "InstructMode.hpp"
 
 //for the GL_ERRORS() macro:
 #include "gl_errors.hpp"
@@ -10,11 +10,7 @@
 
 using namespace std;
 
-Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("blippy_trance.wav"));
-});
-
-SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(next_mode_){
+InstructMode::InstructMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(next_mode_){
     //---------- the bulk of the following opengl code is from game0 ----------
 	
     //----- allocate OpenGL resources -----
@@ -35,7 +31,7 @@ SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(ne
 		//set vertex_buffer as the source of glVertexAttribPointer() commands:
 		glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
 
-		//set up the vertex array object to describe arrays of SplashMode::Vertex:
+		//set up the vertex array object to describe arrays of InstructMode::Vertex:
 		glVertexAttribPointer(
 			color_texture_program.Position_vec4, //attribute
 			3, //size
@@ -119,12 +115,9 @@ SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(ne
 
         GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
     }
-
-    // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
-SplashMode::~SplashMode() {
+InstructMode::~InstructMode() {
 
 	//----- free OpenGL resources -----
 	glDeleteBuffers(1, &vertex_buffer);
@@ -138,7 +131,7 @@ SplashMode::~SplashMode() {
     splash_tex = 0;
 }
 
-bool SplashMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
+bool InstructMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
 	// if (evt.type == SDL_MOUSEMOTION) {
 	// 	//convert mouse from window pixels (top-left origin, +y is down) to clip space ([-1,1]x[-1,1], +y is up):
@@ -158,13 +151,13 @@ bool SplashMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_siz
 	return false;
 }
 
-void SplashMode::update(float elapsed) {
+void InstructMode::update(float elapsed) {
 
 	// TODO: based on position of clicks
 
 }
 
-void SplashMode::draw(glm::uvec2 const &drawable_size) {
+void InstructMode::draw(glm::uvec2 const &drawable_size) {
 
 	//---- compute vertices to draw ----
 

@@ -1,10 +1,11 @@
 //Mode.hpp declares the "Mode::current" static member variable, which is used to decide where event-handling, updating, and drawing events go:
 #include "Mode.hpp"
+#include <functional>
 
-// The "GP21 IntroMode" mode is the class loading screen for the game
-#include "GP21IntroMode.hpp"
-
-#include "SplashMode.hpp"
+#include "GP21IntroMode.hpp" // The "GP21 IntroMode" mode is the class loading screen for the game
+#include "SplashMode.hpp"	 // The "SplashMode" mode is our game's loading screen
+#include "InstructMode.hpp"	 // The "InstructMode" mode is our game's instruction screen
+#include "PlayMode.hpp"	 	 // The "PlayMode" mode is our game's gameplay mode
 
 //For asset loading:
 #include "Load.hpp"
@@ -115,7 +116,7 @@ int main(int argc, char **argv) {
 
 	//------------ create game mode + make current --------------
 	std::function< void() > init_gamemode = []() { 
-		auto next_mode = std::make_shared< SplashMode >();
+		auto next_mode = std::make_shared< SplashMode >(std::make_shared< InstructMode >(std::make_shared< PlayMode >()));
 		Mode::set_current(next_mode);
 	};
 	

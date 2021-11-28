@@ -1,5 +1,5 @@
 /*
- * Untitled Cat Game splash screen
+ * Untitled Cat Game instruction screen
  * This code is loosely ported from 15-466 game0: https://github.com/15-466/15-466-f21-base0 
  * Implementation of helper lambdas in draw() is from Emma's game0 base code: https://github.com/emmaloool/15-466-f21-base0
  */
@@ -20,11 +20,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-struct SplashMode : Mode {
+struct InstructMode : Mode {
     // Passes a pointer to the mode that will be invoked when this one is over/skipped
     // Adapted from ttps://raw.githubusercontent.com/15-466/15-466-f21-intro/main/GP21IntroMode.hpp:
-	SplashMode(std::shared_ptr< Mode > const &next_mode);
-	virtual ~SplashMode();
+	InstructMode(std::shared_ptr< Mode > const &next_mode);
+	virtual ~InstructMode();
 
 	//functions called by main loop:
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
@@ -34,11 +34,8 @@ struct SplashMode : Mode {
     //------ After splash screen, loads instruction screen ------
     std::shared_ptr< Mode > next_mode;
 
-    //------ Game music starts at the splash screen ------
-    std::shared_ptr<Sound::PlayingSample> bg_loop;
-
     //----- Background image assets ------
-    std::string imgbg_path = "./img/splash.png";
+    std::string imgbg_path = "./img/instructions.png";
     GLuint splash_tex = 0;
 
 	//----- opengl assets / helpers ------
@@ -50,7 +47,7 @@ struct SplashMode : Mode {
 		glm::u8vec4 Color;
 		glm::vec2 TexCoord;
 	};
-	static_assert(sizeof(Vertex) == 4*3 + 1*4 + 4*2, "SplashMode::Vertex should be packed");
+	static_assert(sizeof(Vertex) == 4*3 + 1*4 + 4*2, "InstructMode::Vertex should be packed");
 
 	//Shader program that draws transformed, vertices tinted with vertex colors:
 	ColorTextureProgram color_texture_program;

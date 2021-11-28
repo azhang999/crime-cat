@@ -76,7 +76,9 @@ struct PlayMode : Mode {
 
     struct Player {
 		//transform is at player's feet and will be yawed by mouse left/right motion:
-		Scene::Transform *transform = nullptr;
+        Scene::Transform *transform_front = nullptr;
+		Scene::Transform *transform_middle = nullptr;
+        Scene::Transform *head_bump = nullptr;
         // Scene::Transform *facing = nullptr;
 
         float radius = 0.5f;
@@ -103,6 +105,10 @@ struct PlayMode : Mode {
 
     glm::vec3 penetration_normal;
     float penetration_depth;
+
+    int num_collide_objs = 0;
+    // bool collide_front = false;
+    // bool collide_middle = false;
 
     struct Animation {
         std::vector<Scene::Drawable> frames;

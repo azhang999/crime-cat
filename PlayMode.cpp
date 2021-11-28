@@ -153,13 +153,13 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
         // std::cout << transform->name << " "<< transform->bbox[3].x << " " << transform->bbox[3].y 
         //                     << " " << transform->bbox[3].z << std::endl;
         if (drawable.transform->name == "Player") {
-            player.transform = drawable.transform;
-            player.tip = player.transform->position;
-            player.tip.z += 1.0f;
-            player.base = player.transform->position;
-            player.base.z -= 1.0f;
-            player.starting_height = player.transform->position.z;
-        } 
+            player.transform_middle = drawable.transform;
+            player.starting_height = player.transform_middle->position.z;
+        } else if (drawable.transform->name == "PlayerFront") {
+            player.transform_front = drawable.transform;
+        } else if (drawable.transform->name == "HeadBump") {
+            player.head_bump = drawable.transform;
+        }
 	}
 }
 
@@ -369,6 +369,8 @@ PlayMode::PlayMode() :
 
     // remove player capsule from being drawn
     RemoveFrameByName(cat_scene, "Player");
+    RemoveFrameByName(cat_scene, "PlayerFront");
+    RemoveFrameByName(cat_scene, "HeadBump");
 
     player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
     player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
@@ -532,33 +534,111 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
 // TODO extend to save penetration normal, depth to compute sliding for player
 // std::string PlayMode::collide(RoomObject *collided_object) {
 Scene::Transform *PlayMode::collide() {
+    num_collide_objs = 0;
+    // collide_front = false;
+    // collide_middle = false;
     SurfaceType surface;
 
-    switch_rooms(RoomType::LivingRoom);
-    for (auto obj : *current_objects) {
-        if (obj.name == "Rug") continue; // Rug is kinda blocky
-        // if (obj.name == "Player") continue;
-        // if (obj.name == "Facing") continue;
-        // if (obj.name == "CatPlayer") continue;
+    Scene::Transform *collide_obj = nullptr;
 
-        if (capsule_bbox_collision(player.tip, player.base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-            // *collided_object = obj;
-            return obj.transform;
+    // save the vector that is most like (0, 0, 1)
+    // save that collision into penetration_normal, penetration_depth
+    glm::vec3 best_pen_normal = glm::vec3(0.f);
+    float best_pen_depth = 0.f;
+
+    for (int i = 0; i < 2; ++i) {
+        if (i == 0) {
+            switch_rooms(RoomType::LivingRoom);
+        } else {
+            switch_rooms(RoomType::Kitchen);
         }
+
+        for (auto obj : *current_objects) {
+            if (obj.name == "Rug") continue; // Rug is kinda blocky
+
+            glm::vec3 player_tip = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+            glm::vec3 player_base = player_tip;
+            player_tip.z += 1.0f;
+            player_base.z -= 1.0f;
+            if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+                // *collided_object = obj;
+                num_collide_objs++;
+                collide_obj = obj.transform;
+                if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
+                    best_pen_normal = penetration_normal;
+                    best_pen_depth = penetration_depth;
+                }
+                // collide_front = true;
+            }
+
+            player_tip = player.transform_middle->position;
+            player_tip.z += 1.0f;
+            player_base = player.transform_middle->position;
+            player_base.z -= 1.0f;
+            if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+                // *collided_object = obj;
+                num_collide_objs++;
+                collide_obj = obj.transform;
+                if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
+                    best_pen_normal = penetration_normal;
+                    best_pen_depth = penetration_depth;
+                }
+                // collide_middle = true;
+            }
+        }
+
     }
 
-    switch_rooms(RoomType::Kitchen);
-    for (auto obj : *current_objects) {
-        // if (obj.name == "Rug") continue; // Rug is kinda blocky
-        // if (obj.name == "Player") continue;
-        // if (obj.name == "Facing") continue;
-        // if (obj.name == "CatPlayer") continue;
+    penetration_normal = best_pen_normal;
+    penetration_depth = best_pen_depth;
 
-        if (capsule_bbox_collision(player.tip, player.base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-            // *collided_object = obj;
-            return obj.transform;
-        }
-    }
+    // switch_rooms(RoomType::LivingRoom);
+    // for (auto obj : *current_objects) {
+    //     if (obj.name == "Rug") continue; // Rug is kinda blocky
+    //     // if (obj.name == "Player") continue;
+    //     // if (obj.name == "Facing") continue;
+    //     // if (obj.name == "CatPlayer") continue;
+
+    //     glm::vec3 player_tip = player.transform->position;
+    //     player.tip.z += 1.0f;
+    //     glm::vec3 player_base = player.transform->position;
+    //     player.base.z -= 1.0f;
+    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+    //         // *collided_object = obj;
+    //         return obj.transform;
+    //     }
+
+    //     glm::vec3 player_tip = player.transform_front->position;
+    //     player.tip.z += 1.0f;
+    //     glm::vec3 player_base = player.transform_front->position;
+    //     player.base.z -= 1.0f;
+    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+    //         // *collided_object = obj;
+    //         return obj.transform;
+    //     }
+
+    //     glm::vec3 player_tip = player.transform_back->position;
+    //     player.tip.z += 1.0f;
+    //     glm::vec3 player_base = player.transform_back->position;
+    //     player.base.z -= 1.0f;
+    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+    //         // *collided_object = obj;
+    //         return obj.transform;
+    //     }
+    // }
+
+    // switch_rooms(RoomType::Kitchen);
+    // for (auto obj : *current_objects) {
+    //     // if (obj.name == "Rug") continue; // Rug is kinda blocky
+    //     // if (obj.name == "Player") continue;
+    //     // if (obj.name == "Facing") continue;
+    //     // if (obj.name == "CatPlayer") continue;
+
+    //     if (capsule_bbox_collision(player.tip, player.base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+    //         // *collided_object = obj;
+    //         return obj.transform;
+    //     }
+    // }
 
     // -------- TODO: remove these after walls are added back into the scene --------
 
@@ -576,7 +656,7 @@ Scene::Transform *PlayMode::collide() {
     //     return kitchen_floor;
     // }
 
-    return nullptr;
+    return collide_obj;
 }
 
 void PlayMode::update(float elapsed) {
@@ -588,7 +668,8 @@ void PlayMode::update(float elapsed) {
         game_timer = 0.f;
     }
 
-    glm::vec3 prev_player_position = player.transform->position;
+    glm::vec3 prev_player_position = player.transform_middle->position;
+    glm::quat prev_player_rotation = player.transform_middle->rotation;
 
 	//move player:
     //combine inputs into a move:
@@ -627,11 +708,11 @@ void PlayMode::update(float elapsed) {
         } else {
             move = glm::normalize(move) * ground_speed * elapsed;
         }
-        movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
-        player.transform->position += movement;
-        player.tip = player.transform->position;
+        movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
+        player.transform_middle->position += movement;
+        player.tip = player.transform_middle->position;
         player.tip.z += 1.0f;
-        player.base = player.transform->position;
+        player.base = player.transform_middle->position;
         player.base.z -= 1.0f;
     }
 
@@ -639,9 +720,9 @@ void PlayMode::update(float elapsed) {
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
 
         if (left.pressed && !right.pressed)
-            player.transform->rotation *= glm::angleAxis(3.0f * elapsed, up);
+            player.transform_middle->rotation *= glm::angleAxis(3.0f * elapsed, up);
         if (!left.pressed && right.pressed)
-            player.transform->rotation *= glm::angleAxis(-3.0f * elapsed, up);
+            player.transform_middle->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
     
     // #####################################################################
@@ -743,7 +824,7 @@ void PlayMode::update(float elapsed) {
         collision_obj.prev_position = collision_obj.transform->position;
 
         // Calculate player's displacement in this timestep
-        glm::vec3 offset = (player.transform->position - prev_player_position);
+        glm::vec3 offset = (player.transform_middle->position - prev_player_position);
         collision_obj.transform->position += offset;
         for (auto i = 0; i < 8; i++) {
             collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i]; // Save original BBOX position
@@ -790,17 +871,22 @@ void PlayMode::update(float elapsed) {
     if (object_collide_name != "") { // undo movement
         // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
         // Modify player velocity to slide on contact surface:
-        glm::vec3 offset = ((penetration_depth + 0.001f) * penetration_normal);
+        glm::vec3 offset = ((penetration_depth + 0.0001f) * penetration_normal);
+        offset.z = 0.f;
 
-        player.transform->position += offset;
-        player.tip = player.transform->position;
+        player.transform_middle->position += offset;
+        player.tip = player.transform_middle->position;
         player.tip.z += 1.0f;
-        player.base = player.transform->position;
+        player.base = player.transform_middle->position;
         player.base.z -= 1.0f;
 
+        int prev_num_collide_objs = num_collide_objs;
         auto new_collide_side = collide();
-        if (new_collide_side != nullptr) {
-            player.transform->position = prev_player_position;
+        printf("num collide objs: %d\n", prev_num_collide_objs);
+        if (new_collide_side != nullptr || prev_num_collide_objs > 1) {
+            printf("restore transform!\n");
+            player.transform_middle->position = prev_player_position;
+            player.transform_middle->rotation = prev_player_rotation;
             player.tip = prev_player_position;
             player.tip.z += 1.0f;
             player.base = prev_player_position;
@@ -863,18 +949,18 @@ void PlayMode::update(float elapsed) {
 
     // ######################### Resolve falling player #########################
 
-    prev_player_position = player.transform->position;
+    prev_player_position = player.transform_middle->position;
 
     player.air_time += elapsed;
     if (player.jumping) { // jumping
-        player.transform->position.z = player.starting_height + player.init_up_v * player.air_time + 0.5f * gravity * player.air_time * player.air_time;
+        player.transform_middle->position.z = player.starting_height + player.init_up_v * player.air_time + 0.5f * gravity * player.air_time * player.air_time;
     } else { // just gravity
-        player.transform->position.z = player.starting_height + 0.5f * gravity * player.air_time * player.air_time;
+        player.transform_middle->position.z = player.starting_height + 0.5f * gravity * player.air_time * player.air_time;
     }
 
-    player.tip = player.transform->position;
+    player.tip = player.transform_middle->position;
     player.tip.z += 1.0f;
-    player.base = player.transform->position;
+    player.base = player.transform_middle->position;
     player.base.z -= 1.0f;
 
     object_collide = collide();
@@ -884,22 +970,26 @@ void PlayMode::update(float elapsed) {
     }
 
     if (object_collide_name != "") {
-        if (penetration_normal.z < 0) {
-            penetration_normal.z *= -1.f;
-        }
+        // if (penetration_normal.z > 0) {
+        //     player.jumping = false;
+        // }
 
-        penetration_depth = std::abs(penetration_depth);
+        // penetration_normal.x = 0.f;
+        // penetration_normal.y = 0.f;
+
+        // penetration_depth = std::abs(penetration_depth);
 
         bool use_up_vec = is_almost_up_vec(penetration_normal);
         // printf("use_up_vec:%d\n", use_up_vec);
         glm::vec3 new_pos;
         if (use_up_vec) {
             float top_height = get_top_height(object_collide);
-            new_pos =  player.transform->position;
+            new_pos =  player.transform_middle->position;
             new_pos.z = top_height + 1.00001f;
         } else {
-            glm::vec3 offset = ((penetration_depth + 0.000001f) * glm::normalize(penetration_normal));
-            new_pos =  player.transform->position + offset;
+            glm::vec3 offset = ((penetration_depth + 0.25f) * glm::normalize(penetration_normal));
+            offset.z = 0;// ((penetration_depth + 0.000001f) * glm::normalize(penetration_normal).z);
+            new_pos = player.transform_middle->position + offset;
         }
 
         // place cat slightly above surface
@@ -908,18 +998,18 @@ void PlayMode::update(float elapsed) {
         // auto new_pos =  player.transform->position + ((penetration_depth + 0.000001f) * glm::normalize(intersection_vec));
         // auto new_pos = prev_player_position;
         // new_pos.z = top_height + 1.00001f;
-        player.transform->position = new_pos;
+        player.jumping = false;
+        player.air_time = 0.f;
+        player.transform_middle->position = new_pos;
         player.tip = new_pos;
         player.tip.z += 1.0f;
         player.base = new_pos;
         player.base.z -= 1.0f;
-        player.jumping = false;
-        player.air_time = 0.f;
-        player.starting_height = player.transform->position.z;
+        player.starting_height = player.transform_middle->position.z;
     }
 
     // animate walking
-    if (prev_player_position.z == player.transform->position.z) { // potentially walking
+    if (prev_player_position.z == player.transform_middle->position.z) { // potentially walking
         if (player.swatting) {
             player_swat.animate(cat_scene, true, elapsed);
         } else if (moved) {
@@ -928,7 +1018,7 @@ void PlayMode::update(float elapsed) {
             RemoveAllFrames(cat_scene);
             AddFrame(cat_scene, player_walking.frames[player_walking.frame_idx]);
         }
-    } else if (prev_player_position.z < player.transform->position.z) { // up jump
+    } else if (prev_player_position.z < player.transform_middle->position.z) { // up jump
         player_up_jump.animate(cat_scene, true, elapsed);
     } else { // down jump
         player_down_jump.animate(cat_scene, true, elapsed);
@@ -945,7 +1035,7 @@ void PlayMode::update(float elapsed) {
         
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
         glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
-        player.camera->transform->position = player.transform->position + camera_offset;
+        player.camera->transform->position = player.transform_middle->position + camera_offset;
         player.camera->transform->rotation = glm::angleAxis(phi, up);
         player.camera->transform->rotation *= glm::angleAxis(-theta, right);
     }
@@ -982,105 +1072,128 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     living_room_scene.draw(*player.camera);
     kitchen_scene.draw(*player.camera);
 
-    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-    //     glDisable(GL_DEPTH_TEST);
-    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+        glDisable(GL_DEPTH_TEST);
+        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-    //     // for (auto obj : objects) {
-    //         auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-    //                                         [](const RoomObject & elem) { return elem.name == "Key"; });
-    //         auto obj = *(vase_obj_iter);
-    //         auto tip = obj.capsule.tip;
-    //         auto base = obj.capsule.base;
-    //         auto radius = obj.capsule.radius;
+        // for (auto obj : objects) {
+        //     auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
+        //                                     [](const RoomObject & elem) { return elem.name == "Key"; });
+        //     auto obj = *(vase_obj_iter);
+        //     auto tip = obj.capsule.tip;
+        //     auto base = obj.capsule.base;
+        //     auto radius = obj.capsule.radius;
 
-    //         // tip
-    //         auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
-    //         auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
-    //         auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
-    //         auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
+        //     // tip
+        //     auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
+        //     auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
+        //     auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
+        //     auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
             
-    //         draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-    //         // base
-    //         auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
-    //         auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
-    //         auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
-    //         auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
+        //     // base
+        //     auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
+        //     auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
+        //     auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
+        //     auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
             
-    //         draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+        //     draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
 
-    //         // sides
-    //         draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    //         draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    //     // }
+        //     // sides
+        //     draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+        //     draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
+        // // }
 
-        // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // float r = player.radius;
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        // draw_lines.draw(player.tip + glm::vec3(0.f, 0.f, -r), player.tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        float r = player.radius;
 
-        // for (auto &drawable : (*current_scene).drawables) {
-        //     if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
+        glm::vec3 capsule0_tip = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+        capsule0_tip.z += 1.0f;
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip, glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-        //     // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+        glm::vec3 capsule1_tip = player.transform_middle->position;
+        capsule1_tip.z += 1.0f;
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+        //head bump
+        glm::vec3 head_bump = player.head_bump->make_local_to_world() * glm::vec4(player.head_bump->position, 1.0f);
+        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(head_bump, head_bump + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        draw_lines.draw(head_bump, head_bump + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+
+        switch_rooms(RoomType::LivingRoom);
+        for (auto &drawable : (*current_scene).drawables) {
+            continue;
+            // if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
+
+            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+
+            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
 
-        //     // top
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // top
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // // bottom
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // // bottom
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        //     // left
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // left
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // right
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // right
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // front
-        //     draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            // front
+            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //     // back
-        //     draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-        //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            // back
+            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        // }
+        }
 
-    // }
+    }
 
 	{ //use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);

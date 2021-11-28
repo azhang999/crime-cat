@@ -120,8 +120,11 @@ SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(ne
         GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
     }
 
+    game_text.setup(data_path("./font/Roboto-Regular.ttf"), data_path("./text/splash.txt"));
+
     // ------------- Start background music! ---------------
     bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
+
 }
 
 SplashMode::~SplashMode() {
@@ -153,8 +156,10 @@ bool SplashMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_siz
 			Mode::set_current(next_mode);
 			return true;
 		}
+        // if (evt.key.keysym.sym == SDLK_t) {
+        //     game_text.render_text(game_text.TEXT_START_X, game_text.TEXT_START_Y, glm::vec3(0.5f, 0.0f, 0.5f));
+        // }
     }
-
 	return false;
 }
 
@@ -243,4 +248,7 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
         GL_ERRORS(); //PARANOIA: print errors just in case we did something wrong.
     }
+
+    // Draw text
+    game_text.render_text(game_text.TEXT_START_X, game_text.TEXT_START_Y, glm::vec3(0.5f, 0.0f, 0.5f));
 }

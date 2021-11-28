@@ -12,8 +12,8 @@ if $(OS) = NT { #Windows
 		/I"$(NEST_LIBS)/opusfile/include"
 		/I"$(NEST_LIBS)/libopus/include"
 		/I"$(NEST_LIBS)/libogg/include"
-		#/I"$(NEST_LIBS)/harfbuzz/include"
-		#/I"$(NEST_LIBS)/freetype/include"
+		/I"$(NEST_LIBS)/harfbuzz/include"
+		/I"$(NEST_LIBS)/freetype/include"
 		#disable a few warnings:
 		/wd4146 #-1U is still unsigned
 		/wd4297 #unforunately SDLmain is nothrow
@@ -42,8 +42,8 @@ if $(OS) = NT { #Windows
 	File README-libopus.txt : $(NEST_LIBS)\\libopus\\dist\\README-libopus.txt ;
 	File README-opusfile.txt : $(NEST_LIBS)\\opusfile\\dist\\README-opusfile.txt ;
 	File README-libogg.txt : $(NEST_LIBS)\\libogg\\dist\\README-libogg.txt ;
-	#File README-harfbuzz.txt : $(NEST_LIBS)\\harfbuzz\\dist\\README-harfbuzz.txt ;
-	#File README-freetype.txt : $(NEST_LIBS)\\freetype\\dist\\README-freetype.txt ;
+	File README-harfbuzz.txt : $(NEST_LIBS)\\harfbuzz\\dist\\README-harfbuzz.txt ;
+	File README-freetype.txt : $(NEST_LIBS)\\freetype\\dist\\README-freetype.txt ;
 	
 	#File README-libopusenc.txt : $(NEST_LIBS)\\libopusenc\\dist\\README-libopusenc.txt ; #not needed unless you distribute libopusenc with your pipeline code
 
@@ -62,8 +62,8 @@ if $(OS) = NT { #Windows
 		-I$(NEST_LIBS)/opusfile/include                                             #opusfile
 		-I$(NEST_LIBS)/libopus/include                                              #libopus
 		-I$(NEST_LIBS)/libogg/include                                               #libogg
-		#-I$(NEST_LIBS)/freetype/include                                             #freetype
-		#-I$(NEST_LIBS)/harfbuzz/include                                             #harfbuzz
+		-I$(NEST_LIBS)/freetype/include                                             #freetype
+		-I$(NEST_LIBS)/harfbuzz/include                                             #harfbuzz
 		;
 	LINK = clang++ ;
 	LINKFLAGS = -std=c++17 -g -Wall -Werror ;
@@ -74,8 +74,8 @@ if $(OS) = NT { #Windows
 		-L$(NEST_LIBS)/opusfile/lib -lopusfile                                      #opusfile
 		-L$(NEST_LIBS)/libopus/lib -lopus                                           #libopus (for opusfile)
 		-L$(NEST_LIBS)/libogg/lib -logg                                             #libogg (for opusfile)
-		#-L$(NEST_LIBS)/harfbuzz/lib -lharfbuzz                                      #harfbuzz
-		#-L$(NEST_LIBS)/freetype/lib -lfreetype                                      #freetype
+		-L$(NEST_LIBS)/harfbuzz/lib -lharfbuzz                                      #harfbuzz
+		-L$(NEST_LIBS)/freetype/lib -lfreetype                                      #freetype
 		;
 	File README-SDL.txt : $(NEST_LIBS)/SDL2/dist/README-SDL.txt ;
 	File README-glm.txt : $(NEST_LIBS)/glm/dist/README-glm.txt ;
@@ -83,8 +83,8 @@ if $(OS) = NT { #Windows
 	File README-libopus.txt : $(NEST_LIBS)/libopus/dist/README-libopus.txt ;
 	File README-opusfile.txt : $(NEST_LIBS)/opusfile/dist/README-opusfile.txt ;
 	File README-libogg.txt : $(NEST_LIBS)/libogg/dist/README-libogg.txt ;
-	#File README-harfbuzz.txt : $(NEST_LIBS)/harfbuzz/dist/README-harfbuzz.txt ;
-	#File README-freetype.txt : $(NEST_LIBS)/freetype/dist/README-freetype.txt ;
+	File README-harfbuzz.txt : $(NEST_LIBS)/harfbuzz/dist/README-harfbuzz.txt ;
+	File README-freetype.txt : $(NEST_LIBS)/freetype/dist/README-freetype.txt ;
 
 	MakeLocate README-SDL.txt README-glm.txt README-libpng.txt README-libopus.txt README-opusfile.txt README-libogg.txt README-harfbuzz.txt README-freetype.txt README-libopusenc.txt : dist ;
 } else if $(OS) = LINUX { #Linux
@@ -98,8 +98,8 @@ if $(OS) = NT { #Windows
 		-I$(NEST_LIBS)/opusfile/include                                             #opusfile
 		-I$(NEST_LIBS)/libopus/include                                              #libopus
 		-I$(NEST_LIBS)/libogg/include                                               #libogg
-		#-I$(NEST_LIBS)/freetype/include                                             #freetype
-		#-I$(NEST_LIBS)/harfbuzz/include                                             #harfbuzz
+		-I$(NEST_LIBS)/freetype/include                                             #freetype
+		-I$(NEST_LIBS)/harfbuzz/include                                             #harfbuzz
 		;
 	LINK = g++ -no-pie ;
 	LINKFLAGS = -std=c++17 -g -Wall -Werror ;
@@ -110,8 +110,8 @@ if $(OS) = NT { #Windows
 		-L$(NEST_LIBS)/opusfile/lib -lopusfile                                      #opusfile
 		-L$(NEST_LIBS)/libopus/lib -lopus                                           #libopus (for opusfile)
 		-L$(NEST_LIBS)/libogg/lib -logg                                             #libogg (for opusfile)
-		#-L$(NEST_LIBS)/harfbuzz/lib -lharfbuzz                                      #harfbuzz
-		#-L$(NEST_LIBS)/freetype/lib -lfreetype                                      #freetype
+		-L$(NEST_LIBS)/harfbuzz/lib -lharfbuzz                                      #harfbuzz
+		-L$(NEST_LIBS)/freetype/lib -lfreetype                                      #freetype
 
 		;
 	#`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --static-libs` -lGL #SDL2 (old way that allows system libs to also work)
@@ -121,8 +121,8 @@ if $(OS) = NT { #Windows
 	File README-libopus.txt : $(NEST_LIBS)/libopus/dist/README-libopus.txt ;
 	File README-opusfile.txt : $(NEST_LIBS)/opusfile/dist/README-opusfile.txt ;
 	File README-libogg.txt : $(NEST_LIBS)/libogg/dist/README-libogg.txt ;
-	#File README-harfbuzz.txt : $(NEST_LIBS)/harfbuzz/dist/README-harfbuzz.txt ;
-	#File README-freetype.txt : $(NEST_LIBS)/freetype/dist/README-freetype.txt ;
+	File README-harfbuzz.txt : $(NEST_LIBS)/harfbuzz/dist/README-harfbuzz.txt ;
+	File README-freetype.txt : $(NEST_LIBS)/freetype/dist/README-freetype.txt ;
 
 	#File README-libopusenc.txt : $(NEST_LIBS)/libopusenc/dist/README-libopusenc.txt ; #not needed unless you distribute libopusenc with your pipeline code
 
@@ -144,7 +144,9 @@ GAME_NAMES =
 	LitColorTextureProgram
 	BlobShadowTextureProgram
 	ColorTextureProgram
+	TextTextureProgram
 	Sound
+	GameText
 	load_wav
 	load_opus
 	;

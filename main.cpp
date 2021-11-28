@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 	SDL_Window *window = SDL_CreateWindow(
 		"Crime Cat", //TODO: remember to set a title for your game!
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		960, 800, //TODO: modify window size if you'd like
+		1200, 900, //TODO: modify window size if you'd like
 		SDL_WINDOW_OPENGL
 		| SDL_WINDOW_RESIZABLE //uncomment to allow resizing
 		| SDL_WINDOW_ALLOW_HIGHDPI //uncomment for full resolution on high-DPI screens
@@ -115,8 +115,12 @@ int main(int argc, char **argv) {
 	call_load_functions();
 
 	//------------ create game mode + make current --------------
-	std::function< void() > init_gamemode = []() { 
-		auto next_mode = std::make_shared< SplashMode >(std::make_shared< InstructMode >(std::make_shared< PlayMode >()));
+	std::function< void() > init_gamemode = [&]() {
+		auto playmode_ptr = std::make_shared< PlayMode >();
+		auto instruct_ptr = std::make_shared< InstructMode >(playmode_ptr);
+		playmode_ptr.get()->instruct_mode = instruct_ptr;	// can reference instruction mode during gameplay
+
+		auto next_mode = std::make_shared< SplashMode >(instruct_ptr);
 		Mode::set_current(next_mode);
 	};
 	

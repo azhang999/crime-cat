@@ -575,6 +575,11 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             swat.downs += 1;
             swat.pressed = true;
             return true;
+        } 
+        
+        // Switches back to InstrucMode until the user escapes
+        else if (evt.key.keysym.sym == SDLK_i) {  
+            Mode::set_current(instruct_mode);
         }
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {

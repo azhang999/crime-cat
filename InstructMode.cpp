@@ -10,7 +10,7 @@
 
 using namespace std;
 
-InstructMode::InstructMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(next_mode_){
+InstructMode::InstructMode(std::shared_ptr< Mode > const &game_mode_) : game_mode(game_mode_){
     //---------- the bulk of the following opengl code is from game0 ----------
 	
     //----- allocate OpenGL resources -----
@@ -142,8 +142,8 @@ bool InstructMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_s
 	// }
     // TODO: temporary, until clicking on button regions is enabled
     if (evt.type == SDL_KEYDOWN) {
-        if (evt.key.keysym.sym == SDLK_p) {
-			Mode::set_current(next_mode);
+        if (evt.key.keysym.sym == SDLK_i) {
+			Mode::set_current(game_mode);
 			return true;
 		}
     }

@@ -32,7 +32,7 @@ struct InstructMode : Mode {
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
     //------ After splash screen, loads instruction screen ------
-    std::shared_ptr< Mode > next_mode;
+    std::shared_ptr< Mode > game_mode;
 
     //----- Background image assets ------
     std::string imgbg_path = "./img/instructions.png";

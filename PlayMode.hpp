@@ -44,6 +44,10 @@ struct PlayMode : Mode {
     Scene::Transform *collide();
 	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
 
+	// When the game is first loaded, it's after showng the instruction screen
+	// But the instruction screen can be brought back up
+    std::shared_ptr< Mode > instruct_mode;
+
 	//----- game state -----
 
 	//input tracking:

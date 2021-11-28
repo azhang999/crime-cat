@@ -101,21 +101,21 @@ SplashMode::SplashMode() {
 		GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
 	}
 
-    // { //------ Loading splash screen as background ------
-    //     // Based on loading code from https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
-    //     glm::uvec2 imgbg_size(0,0);
-    //     std::vector< glm::u8vec4 > imgbg_data;
-    //     load_png(data_path(imgbg_path), &imgbg_size, &imgbg_data, LowerLeftOrigin);
+    { //------ Loading splash screen as background ------
+        // Based on loading code from https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
+        glm::uvec2 imgbg_size(0,0);
+        std::vector< glm::u8vec4 > imgbg_data;
+        load_png(data_path(imgbg_path), &imgbg_size, &imgbg_data, LowerLeftOrigin);
 
-    //     // Repeat texture setup code
-    //     glGenTextures(1, &splash_tex);
-    //     glBindTexture(GL_TEXTURE_2D, splash_tex);
-    //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgbg_size.x, imgbg_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgbg_data.data());
-    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Repeat texture setup code
+        glGenTextures(1, &splash_tex);
+        glBindTexture(GL_TEXTURE_2D, splash_tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgbg_size.x, imgbg_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgbg_data.data());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    //     GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
-    // }
+        GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
+    }
 }
 
 SplashMode::~SplashMode() {
@@ -156,7 +156,7 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 	//---- compute vertices to draw ----
 
 	//vertices will be accumulated into this list and then uploaded+drawn at the end of this function:
-	std::vector< Vertex > vertices;
+	// std::vector< Vertex > vertices;
 
 	// //inline helper function for rectangle drawing:
 	// auto setup_rect_vertices = [&](glm::vec2 const &center, glm::vec2 const &radius, glm::u8vec4 const &color) {
@@ -172,10 +172,12 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
     // TODO draw buttons with text or something
 
-    { //---- actual drawing ----
-
+    //---- Drawing the background image ----
+    // References code to draw background image texture as two screen-sized triangles:
+    // https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
+    { 
         //clear the color buffer:
-        glClearColor(0.5f,0.5f,0.5f,0.5f);
+        glClearColor(0.f,0.f,0.f,0.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         //use alpha blending:
@@ -183,6 +185,16 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //don't use the depth test:
         glDisable(GL_DEPTH_TEST);
+
+        std::vector< Vertex > vertices;
+        glm::u8vec4 white_color = glm::u8vec4(255, 255, 255, 255);
+        vertices.emplace_back(Vertex(glm::vec3(0.0f, float(drawable_size.y), 0.0f), white_color, glm::vec2(0.0f, 1.0f)));
+        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
+        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
+
+        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
+        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
+        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), 0.0f, 0.0f), white_color, glm::vec2(1.0f, 0.0f)));
 
         //upload vertices to vertex_buffer:
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer); //set vertex_buffer as current
@@ -201,7 +213,7 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
         //bind the solid white texture to location zero so things will be drawn just with their colors:
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, white_tex);
+        glBindTexture(GL_TEXTURE_2D, splash_tex);
 
         //run the OpenGL pipeline:
         glDrawArrays(GL_TRIANGLES, 0, GLsizei(vertices.size()));

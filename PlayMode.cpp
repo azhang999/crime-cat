@@ -773,6 +773,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.move_dir = glm::normalize(player_motion);
                 collision_obj.move_dir.z = 0.f;
                 collision_obj.is_moving = true;
+                collision_obj.speed = 3.0f;
                 printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
                 break;
             }
@@ -857,18 +858,23 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             switch_rooms(RoomType::Kitchen);
         }
         for (auto &obj : *current_objects) {
-            if (obj.collision_type == CollisionType::PushOff && obj.is_moving && !obj.done) {
+            if (obj.collision_type == CollisionType::PushOff && !obj.done) {
                 if (isnan(obj.transform->position.x)) {
                     exit(1);
                 }
                 glm::vec3 orig_pos = obj.transform->position;
 
                 // execute horizontal movement
-                obj.transform->position += obj.move_dir * elapsed * 12.0f;
+                obj.transform->position += obj.move_dir * elapsed * obj.speed;
                 obj.capsule.tip = obj.transform->position;
                 obj.capsule.tip.z += obj.capsule.height/2;
                 obj.capsule.base = obj.transform->position;
                 obj.capsule.base.z  -= obj.capsule.height/2;
+
+                obj.speed -= elapsed * 5.0f;
+                if (obj.speed < 0.01f) {
+                    obj.speed = 0.f;
+                }
                 // obj.capsule.base.z -= 1.0f;
                 // TODO: taper off the horizontal movement (add acceleration)
                 // printf("Vase 1 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
@@ -893,7 +899,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 glm::vec3 after_xy_move_pos = obj.transform->position;
 
                 // gravity - break if hits floor
-                obj.transform->position.z -= elapsed * 3.0f;
+                obj.transform->position.z -= elapsed * 6.0f;
                 obj.capsule.tip = obj.transform->position;
                 obj.capsule.tip.z += obj.capsule.height/2;
                 obj.capsule.base = obj.transform->position;
@@ -905,7 +911,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 if (vertical_collision_name != "") {
                     // printf("vertical_collide: %s\n", vertical_collision_name.c_str());
                     // obj.transform->position = after_xy_move_pos;
-                    if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 0.5f) {
+                    if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 1.0f) {
                         // fell alot
                         score += 5;
                         obj.collided = true;  // prevents user from gaining more points
@@ -922,7 +928,11 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     }
                 } else {
                     // give object some rotation
-                    obj.transform->rotation *= glm::angleAxis(-9.0f * elapsed, glm::vec3(0, -1, 0));
+                    if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 0.1f) {
+                        obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(0, 1, 0));
+                        obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(1, 0, 0));
+                        obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(0, 0, 1));
+                    }
                 }
 
                 printf("Vase 3 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);

@@ -1,6 +1,7 @@
 #include "PlayMode.hpp"
 
 #include "LitColorTextureProgram.hpp"
+#include "BlobShadowTextureProgram.hpp"
 
 #include "DrawLines.hpp"
 #include "gl_errors.hpp"
@@ -21,9 +22,11 @@ Load< MeshBuffer > cat_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 });
 
 GLuint living_room_meshes_for_lit_color_texture_program = 0;
+GLuint living_room_meshes_for_blob_shadow_texture_program = 0;
 Load< MeshBuffer > living_room_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"), data_path("living_room.boundbox"));
 	living_room_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+    living_room_meshes_for_blob_shadow_texture_program = ret->make_vao_for_program(blob_shadow_texture_program->program);
 	return ret;
 });
 
@@ -57,17 +60,22 @@ Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
 
 Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("living_room.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-        // printf("Mesh Name: %s\n", mesh_name.c_str());
 		Mesh const &mesh = living_room_meshes->lookup(mesh_name);
+
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
-
-		drawable.pipeline = lit_color_texture_program_pipeline;
-		drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
-		drawable.pipeline.type = mesh.type;
+        
+        if (transform->name == "CatShadow") {
+            drawable.pipeline = blob_shadow_texture_program_pipeline;
+            drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+        }
+        else {
+            drawable.pipeline = lit_color_texture_program_pipeline;
+            drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
+        }
+        drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
-
 	});
 });
 
@@ -114,6 +122,128 @@ float get_top_height(Scene::Transform *transform) {
     return 0.f;
 }
 
+bool shadow_intersect(Scene::Transform *transform, glm::vec3 cat_pos, glm::vec3 &intersect_pt) {
+    // Raycast down from player position to object top surface bbox planes
+    // Using ray-plane intersection equation from http://15462.courses.cs.cmu.edu/fall2021/lecture/geometricqueries/slide_021
+
+    // Gather true "top" plane normal, offset
+    glm::vec3 N;
+    float offset, x_min, x_max, y_min, y_max;
+    if (transform->top_stand) {
+        x_min = std::min({transform->bbox[5].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[6].x});
+        x_max = std::max({transform->bbox[5].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[6].x});
+        y_min = std::min({transform->bbox[5].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[6].y});
+        y_max = std::max({transform->bbox[5].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[6].y});
+
+        N = glm::normalize(transform->top_n);
+        offset = glm::dot(N, transform->bbox[2]);
+    }
+    else if (transform->bot_stand) {
+        x_min = std::min({transform->bbox[4].x, transform->bbox[0].x, transform->bbox[3].x, transform->bbox[7].x});
+        x_max = std::max({transform->bbox[4].x, transform->bbox[0].x, transform->bbox[3].x, transform->bbox[7].x});
+        y_min = std::min({transform->bbox[4].y, transform->bbox[0].y, transform->bbox[3].y, transform->bbox[7].y});
+        y_max = std::max({transform->bbox[4].y, transform->bbox[0].y, transform->bbox[3].y, transform->bbox[7].y});
+        
+        N = transform->bot_n;
+        offset = glm::dot(N, transform->bbox[4]);
+    }
+    else if (transform->back_stand) {
+        x_min = std::min({transform->bbox[5].x, transform->bbox[1].x, transform->bbox[0].x, transform->bbox[4].x});
+        x_max = std::max({transform->bbox[5].x, transform->bbox[1].x, transform->bbox[0].x, transform->bbox[4].x});
+        y_min = std::min({transform->bbox[5].y, transform->bbox[1].y, transform->bbox[0].y, transform->bbox[4].y});
+        y_max = std::max({transform->bbox[5].y, transform->bbox[1].y, transform->bbox[0].y, transform->bbox[4].y});
+
+        N = transform->back_n;
+        offset = glm::dot(N, transform->bbox[1]);
+    }
+    else if (transform->front_stand) {
+        x_min = std::min({transform->bbox[6].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[7].x});
+        x_max = std::max({transform->bbox[6].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[7].x});
+        y_min = std::min({transform->bbox[6].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[7].y});
+        y_max = std::max({transform->bbox[6].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[7].y});
+
+        N = transform->front_n;
+        offset = glm::dot(N, transform->bbox[2]);
+    }
+    else if (transform->left_stand) {
+        x_min = std::min({transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x, transform->bbox[4].x});
+        x_max = std::max({transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x, transform->bbox[4].x});
+        y_min = std::min({transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y, transform->bbox[4].y});
+        y_max = std::max({transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y, transform->bbox[4].y});
+
+        N = transform->left_n;
+        offset = glm::dot(N, transform->bbox[5]);
+    }
+    else if (transform->right_stand) {
+        x_min = std::min({transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[0].x});
+        x_max = std::max({transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[0].x});
+        y_min = std::min({transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[0].y});
+        y_max = std::max({transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[0].y});
+
+        N = transform->right_n;
+        offset = glm::dot(N, transform->bbox[1]); 
+    }
+    else throw std::runtime_error(transform->name + " does not have a standable surface\n");
+
+    if ((cat_pos.x < x_min) || (cat_pos.x > x_max) || (cat_pos.y < y_min) || (cat_pos.y > y_max)) return false;
+
+
+    glm::vec3 d = glm::vec3(0, 0, -cat_pos.z);
+
+    // Don't want to project shadows on parallel surfaces
+    if (std::abs(glm::dot(N, d)) < 0.001f) return false;
+
+    float t = (offset - glm::dot(N, cat_pos)) / glm::dot(N, d);
+    // if (t < 0) return false;                                     TODO: Check if it intersects? above? cat position
+
+    glm::vec3 plane_pos = cat_pos + d*t;
+
+    if (plane_pos.z < -0.0001f) return false;      // intersects below floor
+
+    // Save intersection point
+    intersect_pt = plane_pos;
+    // intersect_pt.z += 1.0f;
+    // std::cout << glm::to_string(intersect_pt) << std::endl;
+    return true;
+}
+
+float PlayMode::get_surface_below_height(float &closest_dist) {
+    float height = player.base.z;
+    closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
+
+    switch_rooms(RoomType::LivingRoom);
+    for (auto obj : *current_objects) {
+        glm::vec3 intersect_pt;
+        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
+            // if (intersect_pt.z < height) {
+            //     height = intersect_pt.z;
+            // }
+            float dist;
+            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
+                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
+                closest_dist = dist;
+                height = intersect_pt.z;
+            }
+        }
+    }
+
+    switch_rooms(RoomType::Kitchen);
+    for (auto obj : *current_objects) {
+        glm::vec3 intersect_pt;
+        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
+            float dist;
+            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
+                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
+                closest_dist = dist;
+                height = intersect_pt.z;
+            }
+        }
+    }
+
+    return height;
+}
+
+
 void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
 
     for (auto &drawable : scene.drawables) {
@@ -154,6 +284,8 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
         //                     << " " << transform->bbox[3].z << std::endl;
         if (drawable.transform->name == "Player") {
             player.transform_middle = drawable.transform;
+            player.starting_height = player.transform_middle->position.z;
+            player.update_position(player.transform_middle->position);
             player.starting_height = player.transform_middle->position.z;
         } else if (drawable.transform->name == "PlayerFront") {
             player.transform_front = drawable.transform;
@@ -406,8 +538,17 @@ PlayMode::PlayMode() :
     // ----- Start in living room -----
     switch_rooms(RoomType::LivingRoom);
 
+    // Get shadow transform 
+    auto shadow_iter = find_if(living_room_scene.drawables.begin(), living_room_scene.drawables.end(),
+                                        [](const Scene::Drawable &elem) { return elem.transform->name == "CatShadow"; });
+    if (shadow_iter != living_room_scene.drawables.end()) {
+        shadow.drawable = &(*shadow_iter);
+        shadow.drawable->transform->position = living_room_floor->position;
+    }
+    // AddFrame(cat_scene, *(shadow.drawable));
+
     // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 1.0f, glm::vec3(0), 5.0f);
+    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -439,10 +580,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             space.downs += 1;
             space.pressed = true;
             return true;
-        } else if (evt.key.keysym.sym == SDLK_g) {
-            swat.downs += 1;
-            swat.pressed = true;
-            return true;
         }
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
@@ -460,15 +597,17 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_SPACE) {
             space.pressed = false;
             return true;
-        } else if (evt.key.keysym.sym == SDLK_g) {
-            swat.pressed = false;
-            return true;
         }
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
 		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
 			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
+		} else {
+            swat.pressed = true;
+        }
+		return true;
+    } else if (evt.type == SDL_MOUSEBUTTONUP) {
+        swat.pressed = false;
+        return true;
 	} else if (evt.type == SDL_MOUSEMOTION) {
 		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
 			glm::vec2 motion = glm::vec2(
@@ -479,7 +618,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             // face left, face right
             phi -= motion.x;
             theta -= motion.y;
-			theta = -std::min(-theta, 0.5f * 3.1415926f);
+			theta = -std::min(-theta, 0.55f * 3.1415926f);
 			theta = -std::max(-theta, 0.05f * 3.1415926f);
 			return true;
 		}
@@ -1097,10 +1236,14 @@ void PlayMode::update(float elapsed) {
         }
         movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
         player.transform_middle->position += movement;
-        player.tip = player.transform_middle->position;
-        player.tip.z += 1.0f;
-        player.base = player.transform_middle->position;
-        player.base.z -= 1.0f;
+        // player.tip = player.transform_middle->position;
+        // player.tip.z += 1.0f;
+        // player.base = player.transform_middle->position;
+        // player.base.z -= 1.0f;
+        // glm::vec3 movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
+        
+        player.update_position(player.transform_middle->position);
+        // shadow.update_position(player.base, &(living_room_floor->position.z));
     }
 
     { // rotate player
@@ -1134,10 +1277,11 @@ void PlayMode::update(float elapsed) {
         offset.z = 0.f;
 
         player.transform_middle->position += offset;
-        player.tip = player.transform_middle->position;
-        player.tip.z += 1.0f;
-        player.base = player.transform_middle->position;
-        player.base.z -= 1.0f;
+        // player.tip = player.transform_middle->position;
+        // player.tip.z += 1.0f;
+        // player.base = player.transform_middle->position;
+        // player.base.z -= 1.0f;
+        player.update_position(player.transform_middle->position);
 
         int prev_num_collide_objs = num_collide_objs;
         auto new_collide_side = collide();
@@ -1146,10 +1290,11 @@ void PlayMode::update(float elapsed) {
             // printf("restore transform!\n");
             player.transform_middle->position = prev_player_position;
             player.transform_middle->rotation = prev_player_rotation;
-            player.tip = prev_player_position;
-            player.tip.z += 1.0f;
-            player.base = prev_player_position;
-            player.base.z -= 1.0f;
+            // player.tip = prev_player_position;
+            // player.tip.z += 1.0f;
+            // player.base = prev_player_position;
+            // player.base.z -= 1.0f;
+            player.update_position(prev_player_position);
         }
     }
 
@@ -1189,8 +1334,9 @@ void PlayMode::update(float elapsed) {
         bool use_up_vec = is_almost_up_vec(penetration_normal);
         // printf("use_up_vec:%d\n", use_up_vec);
         glm::vec3 new_pos;
+        float top_height = living_room_floor->position.z;           // TODO generalize to previous surface height
         if (use_up_vec) {
-            float top_height = get_top_height(object_collide);
+            top_height = get_top_height(object_collide);
             new_pos =  player.transform_middle->position;
             new_pos.z = top_height + 1.00001f;
         } else {
@@ -1208,12 +1354,21 @@ void PlayMode::update(float elapsed) {
         player.jumping = false;
         player.air_time = 0.f;
         player.transform_middle->position = new_pos;
-        player.tip = new_pos;
-        player.tip.z += 1.0f;
-        player.base = new_pos;
-        player.base.z -= 1.0f;
+        // player.tip = new_pos;
+        // player.tip.z += 1.0f;
+        // player.base = new_pos;
+        // player.base.z -= 1.0f;
+        player.update_position(player.transform_middle->position);
         player.starting_height = player.transform_middle->position.z;
     }
+
+    // Update shadow position
+    {
+        float closest_dist = 0;
+        float height = get_surface_below_height(closest_dist);
+        shadow.update_position(player.base, height, closest_dist);
+    }
+
 
     // animate walking
     if (prev_player_position.z == player.transform_middle->position.z) { // potentially walking
@@ -1230,19 +1385,68 @@ void PlayMode::update(float elapsed) {
     } else { // down jump
         player_down_jump.animate(cat_scene, true, elapsed);
     }
+    
+    { // camera position
+        glm::vec3 camera_center = player.transform_middle->position;
+        glm::vec3 camera_direction = glm::vec3(
+            cos(phi + M_PI/2) * sin(theta),
+            sin(phi + M_PI/2) * sin(theta),
+            cos(theta));
+        // paritally inspired by https://stackoverflow.com/questions/8812073/ray-and-square-rectangle-intersection-in-3d
+        auto rect_distance = [camera_center, camera_direction](glm::vec3 P0, glm::vec3 P1, glm::vec3 P2) {
+            glm::vec3 N = glm::cross(P1 - P0, P2 - P0);
+            float t = glm::dot(P0 - camera_center, N) / glm::dot(camera_direction, N);
+            glm::vec3 P = camera_center + t * camera_direction;
+            if (t < 0) return std::numeric_limits<float>::infinity();
 
-    {
+            float P_proj1 = glm::dot(P - P0, P1 - P0) / glm::length(P1 - P0);
+            float P_proj2 = glm::dot(P - P0, P2 - P0) / glm::length(P2 - P0);
+
+            if (0 <= P_proj1 && P_proj1 <= glm::length(P1 - P0)
+            &&  0 <= P_proj2 && P_proj2 <= glm::length(P2 - P0)) {
+                return t;
+            } else {
+                return std::numeric_limits<float>::infinity();
+            }
+        };
+        auto bbox_distance = [rect_distance](glm::vec3* bbox) {
+            float min_dist = std::numeric_limits<float>::infinity();
+            // top
+            min_dist = std::min(min_dist, rect_distance(bbox[2], bbox[1], bbox[6]));
+            // bottom
+            min_dist = std::min(min_dist, rect_distance(bbox[3], bbox[7], bbox[0]));
+            // left
+            min_dist = std::min(min_dist, rect_distance(bbox[5], bbox[4], bbox[6]));
+            // right
+            min_dist = std::min(min_dist, rect_distance(bbox[1], bbox[2], bbox[0]));
+            // front
+            min_dist = std::min(min_dist, rect_distance(bbox[2], bbox[6], bbox[3]));
+            // back
+            min_dist = std::min(min_dist, rect_distance(bbox[1], bbox[0], bbox[5]));
+            return min_dist;
+        };
         // TODO: remove this once the camera is no longer a child of the cat
         player.camera->transform->parent = nullptr;
 
-        glm::vec3 camera_offset = glm::vec3(
-            camera_radius * cos(phi + M_PI/2) * sin(theta),
-            camera_radius * sin(phi + M_PI/2) * sin(theta),
-            camera_radius * cos(theta));
-        
+        float radius = camera_radius;
+        // loop  through all drawables in each scene
+        for (auto &drawable : living_room_scene.drawables) {
+            // if (bbox_distance(drawable.transform->bbox) < radius) {
+            //     std::cout << drawable.transform->name << std::endl;
+            // }
+            // manually skip some items with weird bbox's
+            if (drawable.transform->name == "Magazine Collided"
+            ||  drawable.transform->name == "Mug Collided")
+                continue;
+            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        }
+        for (auto &drawable : kitchen_scene.drawables) {
+            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        }
+
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
         glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
-        player.camera->transform->position = player.transform_middle->position + camera_offset;
+        player.camera->transform->position = camera_center + radius * camera_direction;
         player.camera->transform->rotation = glm::angleAxis(phi, up);
         player.camera->transform->rotation *= glm::angleAxis(-theta, right);
     }
@@ -1268,46 +1472,58 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
+    glUseProgram(blob_shadow_texture_program->program);
+	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
+	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+	glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+    glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
+	glUseProgram(0);
+
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
+
+    // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
     living_room_scene.draw(*player.camera);
     kitchen_scene.draw(*player.camera);
 
-    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-        glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+    //     glDisable(GL_DEPTH_TEST);
+    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        switch_rooms(RoomType::Kitchen);
-        for (auto obj : (*current_objects)) {
-            if (obj.collision_type != CollisionType::PushOff) continue;
-            auto tip = obj.capsule.tip;
-            auto base = obj.capsule.base;
-            auto r = obj.capsule.radius;
+    //     switch_rooms(RoomType::Kitchen);
+    //     for (auto obj : (*current_objects)) {
+    //         if (obj.collision_type != CollisionType::PushOff) continue;
+    //         auto tip = obj.capsule.tip;
+    //         auto base = obj.capsule.base;
+    //         auto r = obj.capsule.radius;
 
-            // tip
-            glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
-            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         // tip
+    //         glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-            // base
-            glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
-            draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        }
+    //         // base
+    //         glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
+    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //     }
 
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
@@ -1339,56 +1555,56 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // draw_lines.draw(head_bump, head_bump + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // draw_lines.draw(head_bump, head_bump + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        for (auto &drawable : (*current_scene).drawables) {
-            continue;
-            // if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
+    //     for (auto &drawable : (*current_scene).drawables) {
+    //         continue;
+    //         // if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
 
-            // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-            // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+    //         // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+    //         // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
 
-            // top
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         // top
+    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // // bottom
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         // // bottom
+    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-            // left
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         // left
+    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // right
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         // right
+    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // front
-            draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         // front
+    //         draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[3], drawable.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[7], drawable.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-            // back
-            draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-            draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         // back
+    //         draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[0], drawable.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
+    //         draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
-        }
+    //     }
 
-    }
+    // }
 
 	{ //use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);

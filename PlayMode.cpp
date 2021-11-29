@@ -383,7 +383,6 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 living_room_floor = drawable.transform;
             }
             if (drawable.transform->name == "Vase") {
-                printf("VASE OBJECT CREATED!!!!\n");
                 objects.back().given_speed = 3.0f;
                 objects.back().has_sound = true;
                 objects.back().samples.push_back(&shattering);
@@ -653,31 +652,13 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
             switch_rooms(RoomType::Kitchen);
         }
         for (auto obj : *current_objects) {
-            if (obj.name == "Rug") continue; // Rug is kinda blocky
-            // if (obj.name == "Player") continue;
-            // if (obj.name == "Facing") continue;
-            // if (obj.name == "CatPlayer") continue;
-
-            // TODO uncomment this later, floor collisions are inevitable
-            // Set height to floor level when floor collision is detected?
-            // if (obj.name == "Floor") continue;      
+            if (obj.name == "Rug") continue; // Rug is kinda blocky      
             if (obj.name == current_obj.name) continue;
 
             auto capsule = current_obj.capsule;
             SurfaceType surface;
-            // printf("capsule tip: %f %f %f\n", capsule.tip.x, capsule.tip.y, capsule.tip.z);
-            // printf("capsule base: %f %f %f\n", capsule.base.x, capsule.base.y, capsule.base.z);
-            // printf("capsule radius: %f\n", capsule.radius);
 
             if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface, pen_normal, pen_depth)) {
-                // std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << ", direction: " 
-                // << glm::to_string(*pen_normal) << ", depth: " << *pen_depth << std::endl;
-
-                // if (std::isnan((*pen_normal).x) || std::isnan((*pen_normal).x) || std::isnan((*pen_normal).z)) {
-                //     std::cout << "----------- nevermind ignore this it's nan -----------" << std::endl;
-                //     return "";
-                // }
-
                 return obj.name;
             }
         }
@@ -713,12 +694,8 @@ std::string PlayMode::paw_collide() {
     return "";
 }
 
-// TODO extend to save penetration normal, depth to compute sliding for player
-// std::string PlayMode::collide(RoomObject *collided_object) {
 Scene::Transform *PlayMode::collide() {
     num_collide_objs = 0;
-    // collide_front = false;
-    // collide_middle = false;
     SurfaceType surface;
 
     Scene::Transform *collide_obj = nullptr;
@@ -743,14 +720,12 @@ Scene::Transform *PlayMode::collide() {
             player_tip.z += 1.0f;
             player_base.z -= 1.0f;
             if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-                // *collided_object = obj;
                 num_collide_objs++;
                 collide_obj = obj.transform;
                 if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
                     best_pen_normal = penetration_normal;
                     best_pen_depth = penetration_depth;
                 }
-                // collide_front = true;
             }
 
             player_tip = player.transform_middle->position;
@@ -758,14 +733,12 @@ Scene::Transform *PlayMode::collide() {
             player_base = player.transform_middle->position;
             player_base.z -= 1.0f;
             if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-                // *collided_object = obj;
                 num_collide_objs++;
                 collide_obj = obj.transform;
                 if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
                     best_pen_normal = penetration_normal;
                     best_pen_depth = penetration_depth;
                 }
-                // collide_middle = true;
             }
         }
 
@@ -774,77 +747,12 @@ Scene::Transform *PlayMode::collide() {
     penetration_normal = best_pen_normal;
     penetration_depth = best_pen_depth;
 
-    // switch_rooms(RoomType::LivingRoom);
-    // for (auto obj : *current_objects) {
-    //     if (obj.name == "Rug") continue; // Rug is kinda blocky
-    //     // if (obj.name == "Player") continue;
-    //     // if (obj.name == "Facing") continue;
-    //     // if (obj.name == "CatPlayer") continue;
-
-    //     glm::vec3 player_tip = player.transform->position;
-    //     player.tip.z += 1.0f;
-    //     glm::vec3 player_base = player.transform->position;
-    //     player.base.z -= 1.0f;
-    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //         // *collided_object = obj;
-    //         return obj.transform;
-    //     }
-
-    //     glm::vec3 player_tip = player.transform_front->position;
-    //     player.tip.z += 1.0f;
-    //     glm::vec3 player_base = player.transform_front->position;
-    //     player.base.z -= 1.0f;
-    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //         // *collided_object = obj;
-    //         return obj.transform;
-    //     }
-
-    //     glm::vec3 player_tip = player.transform_back->position;
-    //     player.tip.z += 1.0f;
-    //     glm::vec3 player_base = player.transform_back->position;
-    //     player.base.z -= 1.0f;
-    //     if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //         // *collided_object = obj;
-    //         return obj.transform;
-    //     }
-    // }
-
-    // switch_rooms(RoomType::Kitchen);
-    // for (auto obj : *current_objects) {
-    //     // if (obj.name == "Rug") continue; // Rug is kinda blocky
-    //     // if (obj.name == "Player") continue;
-    //     // if (obj.name == "Facing") continue;
-    //     // if (obj.name == "CatPlayer") continue;
-
-    //     if (capsule_bbox_collision(player.tip, player.base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //         // *collided_object = obj;
-    //         return obj.transform;
-    //     }
-    // }
-
-    // -------- TODO: remove these after walls are added back into the scene --------
-
-    // if (capsule_bbox_collision(player.tip, player.base, player.radius, counter_transform->bbox, &surface, &penetration_normal, &penetration_depth, get_top_surface_type(obj.transform))) {
-    //     return counter_transform;
-    // }
-    // if (capsule_bbox_collision(player.tip, player.base, player.radius, living_room_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //     if (current_room != RoomType::LivingRoom) switch_rooms(RoomType::LivingRoom);
-    //     return living_room_floor;
-    // }
-    // if (capsule_bbox_collision(player.tip, player.base, player.radius, kitchen_floor->bbox, &surface, &penetration_normal, &penetration_depth)) {
-    //     // std::cout << "------ Walked into KITCHEN. Current room = " << ((current_room == RoomType::LivingRoom) ? "LivingRoom" : "Kitchen");
-    //     if (current_room != RoomType::Kitchen) switch_rooms(RoomType::Kitchen);
-    //     // std::cout << ", NEW ROOM = " << ((current_room == RoomType::LivingRoom) ? "LivingRoom" : "Kitchen") << std::endl;
-    //     return kitchen_floor;
-    // }
-
     return collide_obj;
 }
 
 // ROOM OBJECTS COLLISION AND MOVEMENT START ------------------------
 void PlayMode::interact_with_objects(float elapsed, std::string object_collide_name, glm::vec3 player_motion) {
 
-    // PART 1:::::::::
     auto switchout_mesh = [&](RoomObject &resolved_obj) {        
         // std::cout << "===> Pos-collision, adding back " << resolved_obj.reaction_drawables[0].transform->name << std::endl;
 
@@ -883,8 +791,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
-
-    // PART 2:::::::::::
     switch_rooms(RoomType::LivingRoom);
     auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
@@ -895,19 +801,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
     }
     RoomObject &collision_obj = *(collision_obj_iter);
 
-    if (object_collide_name == "Vase") {
-        if (collision_obj.collision_type != CollisionType::PushOff) {
-            printf("Vase has type !NOT! PushOff\n");
-            exit(1);
-        } else {
-            printf("Vase has type PushOff\n"); 
-        }
-    }
-
     if (!collision_obj.done) {
         switch (collision_obj.collision_type) {
             case CollisionType::Steal: {
-                printf("Steal detected\n");
                 if (!player.swatting) break; // need to be swatting
                 score += 3;
                 collision_obj.done = true;
@@ -924,7 +820,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 break;
             }
             case CollisionType::Destroy: {
-                printf("Destroy detected\n");
                 if (!player.swatting) break; // need to be swatting
                 score += 5;
                 collision_obj.done = true;
@@ -939,7 +834,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 break;
             }
             case CollisionType::KnockOver: {
-                printf("KnockOver detected\n");
                 score += 3;
                 collision_obj.done = true;
 
@@ -948,19 +842,13 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 break;
             }
             case CollisionType::PushOff: {
-                printf("PUSH detected\n");
                 if (glm::length(player_motion) > 0.f) {
                     collision_obj.move_dir = glm::normalize(player_motion);
                     collision_obj.move_dir.z = 0.f;
                     collision_obj.is_moving = true;
                     collision_obj.speed = collision_obj.given_speed;
-                    printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
+                    // printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
                 }
-                // collision_obj.move_dir = glm::normalize(player_motion);
-                // collision_obj.move_dir.z = 0.f;
-                // collision_obj.is_moving = true;
-                // collision_obj.speed = collision_obj.given_speed;
-                // printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
                 break;
             }
             default: {
@@ -969,72 +857,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
-//    if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
-//         // get velocity applied to object by player (get direction maybe hardcode the length of vector)
-//         collision_obj.move_dir = glm::normalize(player_motion);
-//         collision_obj.move_dir.z = 0.f;
-//         collision_obj.is_moving = true;
-//         printf("PUSH start\n");
-//         printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
-        // get movement of player?/ rotation of player?
-
-        //
-
-        // only x,y no z
-        // start "motion"
-
-
-
-        // std::cout << "I have no idea why this is happening" << std::endl;
-        // Save object's original position
-        // collision_obj.prev_position = collision_obj.transform->position;
-
-        // // Calculate player's displacement in this timestep
-        // glm::vec3 offset = (player.transform_middle->position - prev_player_position);
-        // collision_obj.transform->position += offset;
-        // for (auto i = 0; i < 8; i++) {
-        //     collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i]; // Save original BBOX position
-        //     collision_obj.transform->bbox[i] += offset;                    // Update to new
-        // }
-
-        // // Test for collisions against other objects 
-        // if (capsule_collide(collision_obj, &collision_obj.pen_dir, &collision_obj.pen_depth) == "") {    // Move capsule in absence of collisions
-        //     collision_obj.capsule.tip  = collision_obj.capsule.tip  + (collision_obj.transform->position - collision_obj.prev_position);
-        //     collision_obj.capsule.base = collision_obj.capsule.base + (collision_obj.transform->position - collision_obj.prev_position);
-
-        //     if (!collision_obj.collided && 
-        //         !((collision_obj.x_min <= collision_obj.transform->bbox[5].x && collision_obj.transform->bbox[1].x <= collision_obj.x_max)
-        //         && (collision_obj.y_min <= collision_obj.transform->bbox[2].y && collision_obj.transform->bbox[1].y <= collision_obj.y_max))) {
-        //         collision_obj.is_falling = true;
-        //     }
-        // }
-        // else {  // ------- COLLISION OCCURED -------
-        //     // Slide-alone code inspired from https://wickedengine.net/2020/04/26/capsule-collision-detection/, "Usage"
-        //     // TODO: Assumes objects are off the same weight - can add per-object weights (i.e. heavier objects = slower velocities)
-        //     glm::vec3 obj_velocity = offset / elapsed; //(collision_obj.transform->position - collision_obj.prev_position) / elapsed;
-        //     float obj_velocity_length = glm::length(obj_velocity);
-        //     obj_velocity = glm::normalize(obj_velocity);
-
-        //     if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
-
-        //         // Fix velocity
-        //         glm::vec3 undesired_motion = collision_obj.pen_dir * glm::dot(collision_obj.pen_dir, obj_velocity);
-        //         glm::vec3 desired_motion = obj_velocity - undesired_motion;
-        //         obj_velocity = obj_velocity_length * desired_motion;
-
-        //         // Re-do object movement with displacement vector calculated using this new velocity
-        //         glm::vec3 displacement = obj_velocity * elapsed;
-        //         collision_obj.transform->position = collision_obj.prev_position + displacement;
-        //         for (auto i = 0; i < 8; i++) {
-        //             collision_obj.transform->bbox[i] = collision_obj.orig_bbox[i] + displacement;
-        //         }
-        //         collision_obj.capsule.tip  += displacement;
-        //         collision_obj.capsule.base += displacement;
-        //     }
-    //     // }
-    // }
-
-    // PART 3:::::::
     // ##################### Resolve remaining collision behavior #####################
     // simulate object motion
      for (int i = 0; i < 2; ++i) {
@@ -1061,28 +883,17 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 if (obj.speed < 0.01f) {
                     obj.speed = 0.f;
                 }
-                // obj.capsule.base.z -= 1.0f;
-                // TODO: taper off the horizontal movement (add acceleration)
-                // printf("Vase 1 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
 
                 // check if horizontal movement caused collision
                 std::string horizontal_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                 if (horizontal_collision_name != "") {
-                    printf("horizontal_collide: %s\n", horizontal_collision_name.c_str());
                     // reflect
                     obj.move_dir = glm::normalize(obj.pen_dir);
-                    // printf("pen_dir x:%f y:%f z:%f\n", obj.pen_dir.x, obj.pen_dir.y, obj.pen_dir.z);
-                    // printf("pen_depth %f\n", obj.pen_depth);
                     
                     glm::vec3 offset = ((obj.pen_depth + 0.1f) * obj.pen_dir);
                     offset.z = 0.f;
-                    // printf("Vase 1.4 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
                     obj.transform->position += offset;
-                    // printf("Vase 1.45 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
                 }
-                // printf("Vase 1.5 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
-
-                // glm::vec3 after_xy_move_pos = obj.transform->position;
 
                 // gravity - break if hits floor
                 obj.transform->position.z -= elapsed * 6.0f;
@@ -1090,13 +901,10 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 obj.capsule.tip.z += obj.capsule.height/2;
                 obj.capsule.base = obj.transform->position;
                 obj.capsule.base.z  -= obj.capsule.height/2;
-                // obj.capsule.base.z -= 1.0f;
 
-                // printf("Vase 2 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
                 std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                 if (vertical_collision_name != "") {
                     // printf("vertical_collide: %s\n", vertical_collision_name.c_str());
-                    // obj.transform->position = after_xy_move_pos;
                     if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 1.0f) {
                         // fell alot
                         score += 5;
@@ -1111,7 +919,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                         }
                     } else {
                         // hasn't fallen that much - undo grav
-                        // obj.transform->position = after_xy_move_pos;
                         obj.transform->position += ((obj.pen_depth + 0.00001f) * obj.pen_dir);
                     }
                 } else {
@@ -1123,8 +930,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     }
                 }
 
-                printf("Vase 3 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
-
                 // update bbox with new_pos - orig_pos
                 glm::vec3 total_obj_offset = obj.transform->position - orig_pos;
                 obj.transform->bbox[0] += total_obj_offset;
@@ -1135,55 +940,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 obj.transform->bbox[5] += total_obj_offset;
                 obj.transform->bbox[6] += total_obj_offset;
                 obj.transform->bbox[7] += total_obj_offset;
-
-
-            //     if (!obj.done && obj.is_falling) {
-
-            //         obj.air_time += elapsed;
-
-            //         float height = obj.start_height + 0.5f * gravity * obj.air_time * obj.air_time;
-            //         if (height <= obj.end_height) {
-
-            //             obj.transform->position.z = obj.end_height;
-            //             obj.capsule.base.z = obj.end_height;
-            //             obj.capsule.tip.z = obj.end_height + obj.capsule.height;
-
-            //             obj.is_falling = false;
-            //             obj.air_time = 0.0f;
-
-            //             obj.transform->bbox[5].z = obj.end_height + obj.capsule.height;
-            //             obj.transform->bbox[1].z = obj.end_height + obj.capsule.height;
-            //             obj.transform->bbox[2].z = obj.end_height + obj.capsule.height;
-            //             obj.transform->bbox[6].z = obj.end_height + obj.capsule.height;
-            //             obj.transform->bbox[0].z = obj.end_height;
-            //             obj.transform->bbox[3].z = obj.end_height;
-            //             obj.transform->bbox[4].z = obj.end_height;
-            //             obj.transform->bbox[7].z = obj.end_height;
-
-            //             score += 5;
-            //             obj.collided = true;  // prevents user from gaining more points
-            //             obj.done = true;
-
-            //             switchout_mesh(obj);
-            //             if(collision_obj.has_sound) {
-            //                 Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
-            //             }
-            //         }
-            //         else {
-            //             obj.transform->position.z = height;
-            //             obj.capsule.base.z = height;
-            //             obj.capsule.tip.z = height + obj.capsule.height;
-
-            //             obj.transform->bbox[5].z = height + obj.capsule.height;
-            //             obj.transform->bbox[1].z = height + obj.capsule.height;
-            //             obj.transform->bbox[2].z = height + obj.capsule.height;
-            //             obj.transform->bbox[6].z = height + obj.capsule.height;
-            //             obj.transform->bbox[0].z = height;
-            //             obj.transform->bbox[3].z = height;
-            //             obj.transform->bbox[4].z = height;
-            //             obj.transform->bbox[7].z = height;
-            //         }
-            //     }
             }
         }
     }
@@ -1271,9 +1027,9 @@ void PlayMode::update(float elapsed) {
     }
 
     glm::vec3 player_motion = movement;
-    if (object_collide_name != "") {
-        printf("%s\n", object_collide_name.c_str());
-    }
+    // if (object_collide_name != "") {
+    //     printf("%s\n", object_collide_name.c_str());
+    // }
     interact_with_objects(elapsed, object_collide_name, player_motion);
 
     // --------- * collision with non interactable object occurred * ---------
@@ -1284,23 +1040,13 @@ void PlayMode::update(float elapsed) {
         offset.z = 0.f;
 
         player.transform_middle->position += offset;
-        // player.tip = player.transform_middle->position;
-        // player.tip.z += 1.0f;
-        // player.base = player.transform_middle->position;
-        // player.base.z -= 1.0f;
         player.update_position(player.transform_middle->position);
 
         int prev_num_collide_objs = num_collide_objs;
         auto new_collide_side = collide();
-        // printf("num collide objs: %d\n", prev_num_collide_objs);
         if (new_collide_side != nullptr || prev_num_collide_objs > 1) {
-            // printf("restore transform!\n");
             player.transform_middle->position = prev_player_position;
             player.transform_middle->rotation = prev_player_rotation;
-            // player.tip = prev_player_position;
-            // player.tip.z += 1.0f;
-            // player.base = prev_player_position;
-            // player.base.z -= 1.0f;
             player.update_position(prev_player_position);
         }
     }
@@ -1329,15 +1075,6 @@ void PlayMode::update(float elapsed) {
     }
 
     if (object_collide_name != "") {
-        // if (penetration_normal.z > 0) {
-        //     player.jumping = false;
-        // }
-
-        // penetration_normal.x = 0.f;
-        // penetration_normal.y = 0.f;
-
-        // penetration_depth = std::abs(penetration_depth);
-
         bool use_up_vec = is_almost_up_vec(penetration_normal);
         // printf("use_up_vec:%d\n", use_up_vec);
         glm::vec3 new_pos;
@@ -1361,10 +1098,6 @@ void PlayMode::update(float elapsed) {
         player.jumping = false;
         player.air_time = 0.f;
         player.transform_middle->position = new_pos;
-        // player.tip = new_pos;
-        // player.tip.z += 1.0f;
-        // player.base = new_pos;
-        // player.base.z -= 1.0f;
         player.update_position(player.transform_middle->position);
         player.starting_height = player.transform_middle->position.z;
     }

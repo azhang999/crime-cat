@@ -157,8 +157,8 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
             player.starting_height = player.transform_middle->position.z;
         } else if (drawable.transform->name == "PlayerFront") {
             player.transform_front = drawable.transform;
-        } else if (drawable.transform->name == "HeadBump") {
-            player.head_bump = drawable.transform;
+        } else if (drawable.transform->name == "Paw") {
+            player.paw = drawable.transform;
         }
 	}
 }
@@ -371,7 +371,7 @@ PlayMode::PlayMode() :
     // remove player capsule from being drawn
     RemoveFrameByName(cat_scene, "Player");
     RemoveFrameByName(cat_scene, "PlayerFront");
-    RemoveFrameByName(cat_scene, "HeadBump");
+    RemoveFrameByName(cat_scene, "Paw");
 
     player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
     player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
@@ -542,6 +542,33 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
     return "";
 }
 
+std::string PlayMode::paw_collide() {
+    for (int i = 0; i < 2; ++i) {
+        if (i == 0) {
+            switch_rooms(RoomType::LivingRoom);
+        } else {
+            switch_rooms(RoomType::Kitchen);
+        }
+
+        for (auto obj : *current_objects) {
+            if (obj.collision_type != CollisionType::Steal && obj.collision_type != CollisionType::Destroy) continue;
+
+            glm::vec3 paw_tip = player.paw->make_local_to_world() * glm::vec4(player.paw->position, 1.0f);
+            glm::vec3 paw_base = paw_tip;
+            paw_base.z += 1.0f;
+            paw_tip.z -= 1.0f;
+            // temps are throw aways
+            SurfaceType temp_surface;
+            glm::vec3 temp_pen_normal;
+            float temp_pen_depth;
+            if (capsule_bbox_collision(paw_tip, paw_base, player.radius, obj.transform->bbox, &temp_surface, &temp_pen_normal, &temp_pen_depth)) {
+                return obj.name;
+            }
+        }
+
+    }
+    return "";
+}
 
 // TODO extend to save penetration normal, depth to compute sliding for player
 // std::string PlayMode::collide(RoomObject *collided_object) {
@@ -704,6 +731,15 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         removed_obj.capsule.tip = glm::vec3(-10000);
         removed_obj.capsule.base = glm::vec3(-10000);
     };
+
+    // check for paw
+    if (player.swatting) {
+        std::string swat_obj_name = paw_collide();
+        if (swat_obj_name != "") {
+            object_collide_name = swat_obj_name;
+        }
+    }
+
 
     // PART 2:::::::::::
     switch_rooms(RoomType::LivingRoom);
@@ -919,6 +955,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                         obj.transform->rotation = obj.orig_rotation;
 
                         switchout_mesh(obj);
+                        pseudo_remove_bbox(obj);
                         if(collision_obj.has_sound) {
                             Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
                         }

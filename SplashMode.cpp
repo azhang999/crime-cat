@@ -6,7 +6,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "load_save_png.hpp"
-#include "data_path.hpp"
 
 using namespace std;
 
@@ -121,7 +120,7 @@ SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(ne
     }
 
     // ------------- Setup text rendering ---------------
-    game_text.init_state(data_path("./text/splash.txt"));
+    game_text.init_state(script_path);
     game_text.fill_state();
 
     // ------------- Start background music! ---------------

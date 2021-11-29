@@ -20,9 +20,9 @@ GLuint VAO, VBO;
 GameText::GameText() {  
 	{ // For each of the fonts, setup FT, HB font - code from https://learnopengl.com/In-Practice/Text-Rendering
 		fonts.push_back(Font(belligerent_font_path, 9000, 150));
-		fonts.push_back(Font(belligerent_font_path, 4800, 80));
-		fonts.push_back(Font(blok_font_path, 2400, 40));
-		fonts.push_back(Font(nunito_font_path, 2400, 40));
+		fonts.push_back(Font(belligerent_font_path, 3200, 50));
+		fonts.push_back(Font(nunito_font_path, 2400, 100));
+		fonts.push_back(Font(nunito_font_path, 1600, 30));
 
         for (auto &font: fonts) {
             if (FT_Init_FreeType(&font.lib)) throw std::runtime_error("ERROR::FREETYPE: Could not init FreeType Library");

@@ -9,6 +9,8 @@
 #include "Mode.hpp"
 #include "GL.hpp"
 #include "Sound.hpp"
+#include "data_path.hpp"
+#include "GameText.hpp"
 
 #include <glm/glm.hpp>
 
@@ -36,7 +38,11 @@ struct InstructMode : Mode {
 
     //----- Background image assets ------
     std::string imgbg_path = "./img/instructions.png";
-    GLuint splash_tex = 0;
+    GLuint instruct_tex = 0;
+
+	//----- Text -----
+    std::string script_path = data_path("./text/instruct.txt");
+    GameText game_text; 
 
 	//----- opengl assets / helpers ------
 

@@ -107,14 +107,18 @@ InstructMode::InstructMode(std::shared_ptr< Mode > const &game_mode_) : game_mod
         load_png(data_path(imgbg_path), &imgbg_size, &imgbg_data, LowerLeftOrigin);
 
         // Repeat texture setup code
-        glGenTextures(1, &splash_tex);
-        glBindTexture(GL_TEXTURE_2D, splash_tex);
+        glGenTextures(1, &instruct_tex);
+        glBindTexture(GL_TEXTURE_2D, instruct_tex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgbg_size.x, imgbg_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgbg_data.data());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
     }
+
+	// ------------- Setup text rendering ---------------
+    game_text.init_state(script_path);
+    game_text.fill_state();
 }
 
 InstructMode::~InstructMode() {
@@ -128,7 +132,7 @@ InstructMode::~InstructMode() {
 
 	glDeleteTextures(1, &white_tex);
 	white_tex = 0;
-    splash_tex = 0;
+    instruct_tex = 0;
 }
 
 bool InstructMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
@@ -219,7 +223,7 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
 
         //bind the solid white texture to location zero so things will be drawn just with their colors:
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, splash_tex);
+        glBindTexture(GL_TEXTURE_2D, white_tex);		// TODO: change to instruct_tex
 
         //run the OpenGL pipeline:
         glDrawArrays(GL_TRIANGLES, 0, GLsizei(vertices.size()));
@@ -236,4 +240,7 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
 
         GL_ERRORS(); //PARANOIA: print errors just in case we did something wrong.
     }
+
+	// Draw text
+    game_text.draw_text(game_text.LEFT_X, game_text.TOP_Y, glm::vec3(0.25f, 0.25f, 0.25f));
 }

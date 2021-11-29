@@ -10,6 +10,7 @@
 #include "GL.hpp"
 #include "Sound.hpp"
 #include "GameText.hpp"
+#include "data_path.hpp"
 
 #include <glm/glm.hpp>
 
@@ -43,7 +44,7 @@ struct SplashMode : Mode {
     GLuint splash_tex = 0;
     
     //----- Text -----
-    std::string script_path = "./text/splash.txt";
+    std::string script_path = data_path("./text/splash.txt");
     GameText game_text; 
 
 	//----- opengl assets / helpers ------

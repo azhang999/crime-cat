@@ -61,7 +61,7 @@ struct GameText {
 	typedef enum FontID_t {
 		Belligerent_title = 0,
 		Belligerent_header = 1,
-		Blokletters = 2,
+		Nunito_title = 2,
 		Nunito = 3
 	} FontID;
 
@@ -79,17 +79,9 @@ struct GameText {
 	};
 	std::vector<Font> fonts;
 
-	// std::string path;
-	// int height; 
-	// FontID id;
-	// FT_Library lib;
-	// FT_Face face;
-	// hb_font_t * hb_font;
-	// std::map<FT_ULong, Character> characters;
-
 	// -------- Drawing Constants --------
 	const float LEFT_X = 80.0f;
-	const float TOP_Y = 650.0f;
+	const float TOP_Y = 830.0f;
 
 	const float CENTER_X = 625.0f;
 	const float CENTER_Y = 350.0f;

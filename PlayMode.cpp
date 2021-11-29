@@ -949,11 +949,18 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             }
             case CollisionType::PushOff: {
                 printf("PUSH detected\n");
-                collision_obj.move_dir = glm::normalize(player_motion);
-                collision_obj.move_dir.z = 0.f;
-                collision_obj.is_moving = true;
-                collision_obj.speed = collision_obj.given_speed;
-                printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
+                if (glm::length(player_motion) > 0.f) {
+                    collision_obj.move_dir = glm::normalize(player_motion);
+                    collision_obj.move_dir.z = 0.f;
+                    collision_obj.is_moving = true;
+                    collision_obj.speed = collision_obj.given_speed;
+                    printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
+                }
+                // collision_obj.move_dir = glm::normalize(player_motion);
+                // collision_obj.move_dir.z = 0.f;
+                // collision_obj.is_moving = true;
+                // collision_obj.speed = collision_obj.given_speed;
+                // printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
                 break;
             }
             default: {
@@ -1608,6 +1615,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	{ //use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);
+        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
         float aspect = float(drawable_size.x) / float(drawable_size.y);
 

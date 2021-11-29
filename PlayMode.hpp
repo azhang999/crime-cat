@@ -42,7 +42,9 @@ struct PlayMode : Mode {
 	// std::string floor_collide(); //RoomType floor_collide();
 
     Scene::Transform *collide();
+    std::string paw_collide();
 	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
+    void interact_with_objects(float elapsed, std::string object_collide_name, glm::vec3 player_motion);
 
 	//----- game state -----
 
@@ -78,7 +80,9 @@ struct PlayMode : Mode {
 
     struct Player {
 		//transform is at player's feet and will be yawed by mouse left/right motion:
-		Scene::Transform *transform = nullptr;
+        Scene::Transform *transform_front = nullptr;
+		Scene::Transform *transform_middle = nullptr;
+        Scene::Transform *paw = nullptr;
         // Scene::Transform *facing = nullptr;
 
         float radius = 0.5f;
@@ -104,10 +108,10 @@ struct PlayMode : Mode {
 
 		void update_position(glm::vec3 new_pos) {
 			// Update mesh position
-			transform->position = new_pos;
+			transform_middle->position = new_pos;
 
 			// Update capsule
-			transform->position = new_pos;
+			transform_middle->position = new_pos;
 			tip = new_pos;
 			tip.z += 1.0f;
 			base = new_pos;
@@ -128,6 +132,10 @@ struct PlayMode : Mode {
 
     glm::vec3 penetration_normal;
     float penetration_depth;
+
+    int num_collide_objs = 0;
+    // bool collide_front = false;
+    // bool collide_middle = false;
 
     struct Animation {
         std::vector<Scene::Drawable> frames;

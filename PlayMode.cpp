@@ -231,12 +231,12 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             }
             
             CollisionType type = CollisionType::None;  
-            if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")  type = CollisionType::Steal;
-            else if (drawable.transform->name == "Mug")  type = CollisionType::KnockOver;
+            if (drawable.transform->name == "Vase")             type = CollisionType::PushOff;
+            else if (drawable.transform->name == "Key")         type = CollisionType::Steal;
+            else if (drawable.transform->name == "Mug")         type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
             else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;
+            else if (drawable.transform->name == "Magazine")    type = CollisionType::KnockOver;
 
             objects.push_back( RoomObject(drawable.transform, type) );
 
@@ -252,8 +252,10 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             }
             if (drawable.transform->name == "Vase") {
                 printf("VASE OBJECT CREATED!!!!\n");
+                objects.back().given_speed = 3.0f;
                 objects.back().has_sound = true;
                 objects.back().samples.push_back(&shattering);
+                objects.back().spin = true;
             }
         }
 
@@ -283,8 +285,8 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             else if (drawable.transform->name == "Stove Knob.002") type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Stove Knob.003") type = CollisionType::KnockOver;
             else if (drawable.transform->name == "Faucet") type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Plate") type = CollisionType::Destroy;              // TODO: eventually push-offable
-            else if (drawable.transform->name == "Plate.001") type = CollisionType::Destroy;          // TODO: eventually push-offable
+            else if (drawable.transform->name == "Plate") type = CollisionType::PushOff;              // TODO: eventually push-offable
+            else if (drawable.transform->name == "Plate.001") type = CollisionType::PushOff;          // TODO: eventually push-offable
             else if (drawable.transform->name == "Spoon") type = CollisionType::Steal;
             else if (drawable.transform->name == "Spoon.001") type = CollisionType::Steal;
             else if (drawable.transform->name == "Pan") type = CollisionType::KnockOver;
@@ -308,10 +310,12 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             if (drawable.transform->name == "Plate") {
                 objects.back().has_sound = true;
                 objects.back().samples.push_back(&shattering);
+                objects.back().given_speed = 6.0f;
             }
             if (drawable.transform->name == "Plate.001") {
                 objects.back().has_sound = true;
                 objects.back().samples.push_back(&shattering);
+                objects.back().given_speed = 6.0f;
             }
         }
 
@@ -809,7 +813,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.move_dir = glm::normalize(player_motion);
                 collision_obj.move_dir.z = 0.f;
                 collision_obj.is_moving = true;
-                collision_obj.speed = 3.0f;
+                collision_obj.speed = collision_obj.given_speed;
                 printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
                 break;
             }
@@ -932,7 +936,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 }
                 // printf("Vase 1.5 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
 
-                glm::vec3 after_xy_move_pos = obj.transform->position;
+                // glm::vec3 after_xy_move_pos = obj.transform->position;
 
                 // gravity - break if hits floor
                 obj.transform->position.z -= elapsed * 6.0f;
@@ -961,11 +965,12 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                         }
                     } else {
                         // hasn't fallen that much - undo grav
-                        obj.transform->position = after_xy_move_pos;
+                        // obj.transform->position = after_xy_move_pos;
+                        obj.transform->position += ((obj.pen_depth + 0.00001f) * obj.pen_dir);
                     }
                 } else {
                     // give object some rotation
-                    if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 0.1f) {
+                    if (obj.spin && std::abs(obj.orig_pos.z - obj.transform->position.z) > 0.1f) {
                         obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(0, 1, 0));
                         obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(1, 0, 0));
                         obj.transform->rotation *= glm::angleAxis(9.0f * elapsed, glm::vec3(0, 0, 1));
@@ -1278,42 +1283,31 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         glDisable(GL_DEPTH_TEST);
         DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        // for (auto obj : objects) {
-        //     auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-        //                                     [](const RoomObject & elem) { return elem.name == "Key"; });
-        //     auto obj = *(vase_obj_iter);
-        //     auto tip = obj.capsule.tip;
-        //     auto base = obj.capsule.base;
-        //     auto radius = obj.capsule.radius;
+        switch_rooms(RoomType::Kitchen);
+        for (auto obj : (*current_objects)) {
+            if (obj.collision_type != CollisionType::PushOff) continue;
+            auto tip = obj.capsule.tip;
+            auto base = obj.capsule.base;
+            auto r = obj.capsule.radius;
 
-        //     // tip
-        //     auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
-        //     auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
-        //     auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
-        //     auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
-            
-        //     draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
+            // tip
+            glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
+            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-        //     // base
-        //     auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
-        //     auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
-        //     auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
-        //     auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
-            
-        //     draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-        //     draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-
-        //     // sides
-        //     draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-        //     draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-        // // }
+            // base
+            glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
+            draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        }
 
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
@@ -1345,7 +1339,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // draw_lines.draw(head_bump, head_bump + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // draw_lines.draw(head_bump, head_bump + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        switch_rooms(RoomType::LivingRoom);
         for (auto &drawable : (*current_scene).drawables) {
             continue;
             // if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;

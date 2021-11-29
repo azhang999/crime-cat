@@ -78,4 +78,6 @@ class RoomObject {
         bool is_moving = false;
         glm::vec3 move_dir = glm::vec3(0.f);
         float speed = 0.0f;
+        float given_speed = 0.f;
+        bool spin = false;
 };

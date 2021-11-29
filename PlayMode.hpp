@@ -7,6 +7,7 @@
 #include "Collision.hpp"
 #include "Mesh.hpp"
 #include "Load.hpp"
+#include "GameText.hpp"
 
 #include <glm/glm.hpp>
 
@@ -148,8 +149,23 @@ struct PlayMode : Mode {
 	float phi = ((float)M_PI)/2.f;
 	float camera_radius = 10.0f;
 
-    float game_timer = 5.0f * 60.f; // in seconds
+	struct GameTimer {
+		float seconds = 1.0f * 60.f;
+		std::string to_string() {
+			int sec = static_cast<int>(std::round(seconds));
+			int minutes = sec / 60;
+			int seconds = sec % 60;
+			if (seconds < 10)
+				return std::to_string(minutes) + ":0" + std::to_string(seconds);
+			else 
+				return std::to_string(minutes) + ":" + std::to_string(seconds);
+		}
+	};
+	GameTimer game_timer;
     bool game_over = false;
 
     Scene::Transform *wall1, *wall2, *wall3, *wall4;
+
+	std::string script_path = data_path("./text/play.txt");
+    GameText game_text; 
 };

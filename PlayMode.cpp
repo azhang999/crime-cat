@@ -522,10 +522,6 @@ PlayMode::PlayMode() :
     GenerateBBox(living_room_scene, living_room_meshes);
     GenerateBBox(kitchen_scene, kitchen_meshes);
 
-    // ##################################################################
-    //          Premature optimization is the root of all evil :)
-    // ###############################################################
-
     generate_room_objects(living_room_scene, living_room_objects, RoomType::LivingRoom);
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
 
@@ -540,6 +536,11 @@ PlayMode::PlayMode() :
         shadow.drawable->transform->position = living_room_floor->position;
     }
     // AddFrame(cat_scene, *(shadow.drawable));
+
+    // ------------- Setup text rendering ---------------
+    game_text.gamemode = true;
+    game_text.init_state(script_path);
+    game_text.fill_state();
 }
 
 PlayMode::~PlayMode() {
@@ -725,10 +726,10 @@ Scene::Transform *PlayMode::collide() {
 void PlayMode::update(float elapsed) {
     if (game_over) return;
 
-    game_timer -= elapsed;
-    if (game_timer <= 0.f) {
+    game_timer.seconds -= elapsed;
+    if (game_timer.seconds <= 0.f) {
         game_over = true;
-        game_timer = 0.f;
+        game_timer.seconds = 0.f;
     }
 
     glm::vec3 prev_player_position = player.transform->position;
@@ -1102,181 +1103,57 @@ void PlayMode::update(float elapsed) {
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
-	//update camera aspect ratio for drawable:
-	player.camera->aspect = float(drawable_size.x) / float(drawable_size.y);
+    // Draw scene meshes
+    {
+        //update camera aspect ratio for drawable:
+        player.camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
-	//set up light type and position for lit_color_texture_program:
-	// TODO: consider using the Light(s) in the scene to do this
-	glUseProgram(lit_color_texture_program->program);
-	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
-	glUseProgram(0);
+        //set up light type and position for lit_color_texture_program:
+        // TODO: consider using the Light(s) in the scene to do this
+        glUseProgram(lit_color_texture_program->program);
+        glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
+        glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+        glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+        glUseProgram(0);
 
-    glUseProgram(blob_shadow_texture_program->program);
-	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
-    glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
-	glUseProgram(0);
+        glUseProgram(blob_shadow_texture_program->program);
+        glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
+        glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+        glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+        glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
+        glUseProgram(0);
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
 
-    // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	cat_scene.draw(*player.camera);
-    living_room_scene.draw(*player.camera);
-    kitchen_scene.draw(*player.camera);
+        cat_scene.draw(*player.camera);
+        living_room_scene.draw(*player.camera);
+        kitchen_scene.draw(*player.camera);
+    }
 
-    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-    //     glDisable(GL_DEPTH_TEST);
-    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
-
-    // //     // for (auto obj : objects) {
-    // //         auto vase_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-    // //                                         [](const RoomObject & elem) { return elem.name == "Key"; });
-    // //         auto obj = *(vase_obj_iter);
-    // //         auto tip = obj.capsule.tip;
-    // //         auto base = obj.capsule.base;
-    // //         auto radius = obj.capsule.radius;
-
-    // //         // tip
-    // //         auto A = glm::vec3(tip.x + radius, tip.y + radius, tip.z);
-    // //         auto B = glm::vec3(tip.x - radius, tip.y - radius, tip.z);
-    // //         auto C = glm::vec3(tip.x + radius, tip.y - radius, tip.z);
-    // //         auto D = glm::vec3(tip.x - radius, tip.y + radius, tip.z);
-            
-    // //         draw_lines.draw(A, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(B, C, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(D, B, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(A, D, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-
-    // //         // base
-    // //         auto E = glm::vec3(base.x + radius, base.y + radius, base.z);
-    // //         auto F = glm::vec3(base.x - radius, base.y - radius, base.z);
-    // //         auto G = glm::vec3(base.x + radius, base.y - radius, base.z);
-    // //         auto H = glm::vec3(base.x - radius, base.y + radius, base.z);
-            
-    // //         draw_lines.draw(E, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(F, G, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(H, F, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    // //         draw_lines.draw(E, H, glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-
-    // //         // sides
-    // //         draw_lines.draw(A,E, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    // //         draw_lines.draw(B,F, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    // //         draw_lines.draw(C,G, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    // //         draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
-    // //     // }
-
-    //     // for (auto &drawable : (*current_scene).drawables) {
-    //     for (auto obj : living_room_objects) {
-    //         // if (drawable.transform->name != "Table.005" && drawable.transform->name != "Key") continue;
-
-    //         // draw_lines.draw(drawable.transform->bbox[5], drawable.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         // draw_lines.draw(drawable.transform->bbox[1], drawable.transform->bbox[2], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-
-    //         // draw_lines.draw(drawable.transform->bbox[2], drawable.transform->bbox[6], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //         // draw_lines.draw(drawable.transform->bbox[6], drawable.transform->bbox[5], glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-    //         // top
-    //         if (obj.transform->top_stand) {
-    //             draw_lines.draw(obj.transform->bbox[5], obj.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[1], obj.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[2], obj.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[6], obj.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         }
-            
-    //         // bottom
-    //         if (obj.transform->bot_stand) {
-    //             draw_lines.draw(obj.transform->bbox[4], obj.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[0], obj.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[3], obj.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[7], obj.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         }
-            
-    //         // left
-    //         if (obj.transform->left_stand) {
-    //             draw_lines.draw(obj.transform->bbox[5], obj.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[6], obj.transform->bbox[7], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[7], obj.transform->bbox[4], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[4], obj.transform->bbox[5], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         }
-    //         // right
-    //         if (obj.transform->right_stand) {
-    //             draw_lines.draw(obj.transform->bbox[1], obj.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[2], obj.transform->bbox[3], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[3], obj.transform->bbox[0], glm::u8vec4(0x00, 0x00, 0xff, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[0], obj.transform->bbox[1], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         }
-
-    //         // front
-    //         if (obj.transform->front_stand) {
-    //             draw_lines.draw(obj.transform->bbox[6], obj.transform->bbox[2], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[2], obj.transform->bbox[3], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[3], obj.transform->bbox[7], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[7], obj.transform->bbox[6], glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-    //         }
-
-    //         // back
-    //         if (obj.transform->back_stand) {
-    //             draw_lines.draw(obj.transform->bbox[5], obj.transform->bbox[1], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[1], obj.transform->bbox[0], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[0], obj.transform->bbox[4], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //             draw_lines.draw(obj.transform->bbox[4], obj.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
-    //         }
-
+    // !TODO handle gameover
+	// 	constexpr float H = 0.09f;
+    //     std::string message;
+    //     if (game_over) {
+    //         message = "Your Owner Came Back, GAME OVER!";
+    //     } else {
+    //         message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
     //     }
 
-    // }
-
-	{ //use DrawLines to overlay some text:
-        glDisable(GL_DEPTH_TEST);
-
-        float aspect = float(drawable_size.x) / float(drawable_size.y);
-
-        DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-		constexpr float H = 0.09f;
-        std::string message;
-        if (game_over) {
-            message = "Your Owner Came Back, GAME OVER!";
-        } else {
-            message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
-        }
-
-		lines.draw_text(message,
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text(message,
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-
-        constexpr float score_H = 0.12f;
-        lines.draw_text("Score: " + std::to_string(score),
-            glm::vec3(-aspect + 0.1f * score_H, -1.0 + 0.1f * score_H + 0.2f, 0.0),
-			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Score: " + std::to_string(score),
-			glm::vec3(-aspect + 0.1f * score_H + ofs, -1.0 + + 0.1f * score_H + ofs + 0.2f, 0.0),
-			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	}
-	GL_ERRORS();
+    // Draw text
+    {
+        game_text.edit_state(game_text.SCORE, std::to_string(score));
+        game_text.edit_state(game_text.TIME, game_timer.to_string());
+        game_text.edit_state(game_text.COLLISION, " e e e ");
+        game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
+    }
 }

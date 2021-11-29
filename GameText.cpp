@@ -72,8 +72,6 @@ void GameText::init_state(std::string script_path) {
     txt_file.open(script_path, std::ios::in);
     if (txt_file.is_open()) {
         while (getline(txt_file, line)) {
-            // std::cout<< line <<std::endl;
-
             // Read text paragraphs as a sequence of lines, so we can't just loop over all lines
             // uint8_t num_lines = stoi(line); 	// tells us how many phase text lines to read
             auto f_i = line.find(' ');
@@ -82,9 +80,7 @@ void GameText::init_state(std::string script_path) {
 
             // Add lines in this paragraph
             for (uint8_t i = 0; i < num_lines; i++) {
-                getline(txt_file, line);
-                // std::cout<< line <<std::endl;
-    
+                getline(txt_file, line);    
                 font_ids.push_back(font_type);
                 std::vector<char> line_chars(line.begin(), line.end());
                 lines.push_back(line_chars);
@@ -93,6 +89,12 @@ void GameText::init_state(std::string script_path) {
             getline(txt_file,line);
         }
     }
+    
+    if (gamemode) {
+        SCORE = lines.size();
+        TIME = lines.size() + 1;
+        COLLISION = lines.size() + 2;
+    }
 }
 
 void GameText::fill_state() {
@@ -100,6 +102,37 @@ void GameText::fill_state() {
     
     for (size_t i = 0; i < lines.size(); i++) {
         add_text_to_HBbuf(lines[i], font_ids[i]);
+    }
+
+    if (gamemode) {
+        // Add special lines
+        add_text_to_HBbuf(score, 1);
+        add_text_to_HBbuf(time, 1);
+        add_text_to_HBbuf(collision, 1);
+    }
+}
+
+void GameText::edit_state(uint8_t buf_id, std::string new_line, glm::vec3 color) {
+    if (gamemode) {
+        // std::vector<char> new_chars(new_line.begin(), new_line.end());
+        // lines[buf_id] = new_chars;
+        // lines[buf_id].clear();
+        // for (auto c : new_chars) lines[buf_id].push_back(c);
+
+        std::vector<char> new_chars(new_line.begin(), new_line.end());
+
+        if (buf_id == SCORE) score = new_chars;
+        else if (buf_id == TIME) time = new_chars;
+        else if (buf_id == COLLISION) collision = new_chars;
+
+        if (color != glm::vec3(-1.0f)) {
+            if (buf_id == SCORE) score_color = color;
+            else if (buf_id == TIME)  time_color = color;
+            else if (buf_id == COLLISION) collision_color = color;
+        }
+
+        // Refill HB buffer
+        fill_state();
     }
 }
 
@@ -245,8 +278,14 @@ void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3
 
 void GameText::draw_text(float x, float y, glm::vec3 color) {
     auto height_offset = 50;
-    for (size_t i = 0; i < hb_buffers.size(); i++) {
+    for (size_t i = 0; i < lines.size(); i++) {
 		render_text_buffer(i, x, y - height_offset, color, font_ids[i]);
         height_offset += fonts[font_ids[i]].offset;
 	}
+
+    if (gamemode) {
+        render_text_buffer(SCORE, score_loc.x, score_loc.y, score_color, 1);
+        render_text_buffer(TIME, time_loc.x, time_loc.y, time_color, 1);
+        render_text_buffer(COLLISION, collision_loc.x, collision_loc.y, collision_color, 1);
+    }
 }

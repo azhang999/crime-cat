@@ -29,20 +29,38 @@ struct GameText {
 	void render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id);
 	void draw_text(float x, float y, glm::vec3 color);
 
+	// -------- Text State Routines ---------
+	void init_state(std::string script_path);
+	void fill_state();
+	void edit_state(uint8_t buf_id, std::string new_line, glm::vec3 color = glm::vec3(-1.0f));
+	void add_text_to_HBbuf(std::vector<char> text, uint8_t font_id);
+
 	// -------- Screen Text Initialization/Maintenance --------
 	// struct ScreenText {
 	// 	size_t id;								// ID of current screen
-		std::vector<uint8_t> font_ids;				// Font associated with each text line
-		std::vector<std::vector<char>> lines;	// Text lines
+	std::vector<uint8_t> font_ids;				// Font associated with each text line
+	std::vector<std::vector<char>> lines;	// Text lines
 	// };
 	// std::vector<ScreenText> screen_texts;
-
-
 	std::vector<hb_buffer_t *> hb_buffers;
 
-	void init_state(std::string script_path);
-	void fill_state();
-	void add_text_to_HBbuf(std::vector<char> text, uint8_t font_id);
+	// ------ Special fields for PlayMode-modifiable text ------
+	bool gamemode = false;
+	std::vector<char> score = {'0'};
+	std::vector<char> time = {'1',':','0','0'};
+	std::vector<char> collision = {' '};
+
+	uint8_t SCORE = 0;
+	uint8_t TIME = 1;
+	uint8_t COLLISION = 2;
+
+	glm::vec2 score_loc = glm::vec2(250.0f, 800.0f);
+	glm::vec2 time_loc = glm::vec2(1000.0f, 800.0f);
+	glm::vec2 collision_loc = glm::vec2(250.0f, 750.0f);
+
+	glm::vec3 score_color = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 time_color = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 collision_color = glm::vec3(0.2f, 0.2f, 0.2f);
 
 	// -------- Font Character Rendering --------
 
@@ -58,6 +76,8 @@ struct GameText {
 	std::string blok_font_path = data_path("./font/Blokletters-Potlood/Blokletters-Potlood.ttf");
 	std::string nunito_font_path = data_path("./font/nunito/Nunito-Regular.ttf");
 	
+	// Fonts are associated with a typeface and a size style
+	// The font for a particular portion of text can be specified in the text file
 	typedef enum FontID_t {
 		Belligerent_title = 0,
 		Belligerent_header = 1,
@@ -82,6 +102,8 @@ struct GameText {
 	// -------- Drawing Constants --------
 	const float LEFT_X = 80.0f;
 	const float TOP_Y = 830.0f;
+	const float RIGHT_X  = 830.0f;
+	// const float BOT_Y = 600.0f;
 
 	const float CENTER_X = 625.0f;
 	const float CENTER_Y = 350.0f;

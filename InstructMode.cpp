@@ -136,29 +136,16 @@ InstructMode::~InstructMode() {
 }
 
 bool InstructMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
-
-	// if (evt.type == SDL_MOUSEMOTION) {
-	// 	//convert mouse from window pixels (top-left origin, +y is down) to clip space ([-1,1]x[-1,1], +y is up):
-	// 	glm::vec2 clip_mouse = glm::vec2(
-	// 		(evt.motion.x + 0.5f) / window_size.x * 2.0f - 1.0f,
-	// 		(evt.motion.y + 0.5f) / window_size.y *-2.0f + 1.0f
-	// 	);
-	// }
-    // TODO: temporary, until clicking on button regions is enabled
     if (evt.type == SDL_KEYDOWN) {
         if (evt.key.keysym.sym == SDLK_i) {
 			Mode::set_current(game_mode);
 			return true;
 		}
     }
-
 	return false;
 }
 
 void InstructMode::update(float elapsed) {
-
-	// TODO: based on position of clicks
-
 }
 
 void InstructMode::draw(glm::uvec2 const &drawable_size) {

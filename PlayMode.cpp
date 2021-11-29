@@ -1115,8 +1115,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
-    std::cout << shadow.closest_dist << std::endl;
-
     glUseProgram(blob_shadow_texture_program->program);
 	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
 	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));

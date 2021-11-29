@@ -13,6 +13,7 @@
 #include <vector>
 #include <deque>
 #include <iostream>
+#include <limits>
 
 
 struct PlayMode : Mode {
@@ -36,6 +37,7 @@ struct PlayMode : Mode {
 
 	void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
+	float get_surface_below_height(float &closest_dist);
 	// void check_room();
 	// std::string floor_collide(); //RoomType floor_collide();
 
@@ -99,7 +101,30 @@ struct PlayMode : Mode {
         // Scene::Transform *ground = nullptr;
         // SurfaceType surface = TOP;
         // float ground_level = 0.f;
+
+		void update_position(glm::vec3 new_pos) {
+			// Update mesh position
+			transform->position = new_pos;
+
+			// Update capsule
+			transform->position = new_pos;
+			tip = new_pos;
+			tip.z += 1.0f;
+			base = new_pos;
+			base.z -= 1.0f;
+		}
 	} player;
+
+	struct Shadow {
+		Scene::Drawable *drawable;
+		float closest_dist = 0;
+
+		void update_position(glm::vec3 new_pos, float height, float dist) {
+			drawable->transform->position = new_pos;
+			drawable->transform->position.z = height + 0.001f;
+			closest_dist = dist;
+		}
+	} shadow;
 
     glm::vec3 penetration_normal;
     float penetration_depth;

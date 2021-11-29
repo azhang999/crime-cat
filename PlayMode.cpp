@@ -728,9 +728,10 @@ void PlayMode::update(float elapsed) {
 
     game_timer.seconds -= elapsed;
     if (game_timer.seconds <= 0.f) {
-        game_over = false;
+        game_over = true;
         game_text.GAMEOVER = true;
         game_timer.seconds = 0.f;
+        return;
     }
 
     glm::vec3 prev_player_position = player.transform->position;

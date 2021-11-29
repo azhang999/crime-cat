@@ -19,10 +19,10 @@ GLuint VAO, VBO;
 
 GameText::GameText() {  
 	{ // For each of the fonts, setup FT, HB font - code from https://learnopengl.com/In-Practice/Text-Rendering
-		fonts.push_back(Font(belligerent_font_path, 9000, 150));
-		fonts.push_back(Font(belligerent_font_path, 3200, 50));
-		fonts.push_back(Font(nunito_font_path, 2400, 100));
-		fonts.push_back(Font(nunito_font_path, 1600, 30));
+		fonts.push_back(Font(belligerent_font_path, 9000, 150.0f));
+		fonts.push_back(Font(belligerent_font_path, 3200, 50.0f));
+		fonts.push_back(Font(nunito_font_path, 2400, 100.0f));
+		fonts.push_back(Font(nunito_font_path, 1600, 30.0f));
 
         for (auto &font: fonts) {
             if (FT_Init_FreeType(&font.lib)) throw std::runtime_error("ERROR::FREETYPE: Could not init FreeType Library");
@@ -72,7 +72,6 @@ void GameText::init_state(std::string script_path) {
     txt_file.open(script_path, std::ios::in);
     if (txt_file.is_open()) {
         while (getline(txt_file, line)) {
-            std::cout << line << std::endl;
             // Read text paragraphs as a sequence of lines, so we can't just loop over all lines
             auto f_i = line.find(' ');
             uint8_t num_lines = stoi(line.substr(0, f_i));
@@ -95,8 +94,6 @@ void GameText::init_state(std::string script_path) {
         TIME = lines.size() + 1;
         COLLISION = lines.size() + 2;
     }
-
-    std::cout << "LINES SIZE: " << line.size() << std::endl;
 }
 
 void GameText::fill_state() {
@@ -128,12 +125,14 @@ void GameText::edit_state(size_t buf_id, std::string new_line, glm::vec3 color) 
 }
 
 void GameText::update_state() {
-    if (PLAYMODE) fill_state();
+    if (PLAYMODE) {
+        fill_state();
 
-    // Add special lines
-    add_text_to_HBbuf(score, 1);
-    add_text_to_HBbuf(time, 1);
-    add_text_to_HBbuf(collision, 1);
+        // Add special lines
+        add_text_to_HBbuf(score, 1);
+        add_text_to_HBbuf(time, 1);
+        add_text_to_HBbuf(collision, 1);
+    }
 }
 
 
@@ -156,7 +155,7 @@ void GameText::add_text_to_HBbuf(std::vector<char> text, uint8_t font_id) {
     hb_buffers.push_back(buf);
 }
 
-void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id) {
+void GameText::render_text_buffer(size_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id) {
 	glDisable(GL_DEPTH_TEST);
 
 	// Render text - again following https://learnopengl.com/In-Practice/Text-Rendering, function RenderText()
@@ -249,8 +248,8 @@ void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3
         float xpos = x + ((float)ch.Bearing.x);
         float ypos = y - (((float)ch.Size.y) - ((float)ch.Bearing.y));
 
-        float w = ch.Size.x;
-        float h = ch.Size.y;
+        float w = (float)ch.Size.x;
+        float h = (float)ch.Size.y;
         // update VBO for each character
         float vertices[6][4] = {
             { xpos,     ypos + h,   0.0f, 0.0f },            
@@ -278,7 +277,7 @@ void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3
 }
 
 void GameText::draw_text(float x, float y, glm::vec3 color) {
-    auto height_offset = 50;
+    float height_offset = 50.0f;
 
     if (PLAYMODE) {
         // TODO: really not sure why 3 is the offset but oh well!

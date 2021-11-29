@@ -26,7 +26,7 @@ struct GameText {
 
 	// -------- Text Drawing Routine --------
 	// void render_text(int scene_id, int text_id, float x, float y, glm::vec3 color);
-	void render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id);
+	void render_text_buffer(size_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id);
 	void draw_text(float x, float y, glm::vec3 color);
 
 	// -------- Text State Routines ---------
@@ -88,11 +88,11 @@ struct GameText {
 	} FontID;
 
 	struct Font {
-		Font(std::string font_path_, int height_, int offset_) : path(font_path_), height(height_), offset(offset_) {};
+		Font(std::string font_path_, int height_, float offset_) : path(font_path_), height(height_), offset(offset_) {};
 
 		std::string path;
 		int height;
-		int offset;
+		float offset;
 		FontID id;
 		FT_Library lib;
 		FT_Face face;

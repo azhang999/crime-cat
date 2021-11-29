@@ -25,14 +25,14 @@ if $(OS) = NT { #Windows
 		/LIBPATH:"$(NEST_LIBS)/opusfile/lib"
 		/LIBPATH:"$(NEST_LIBS)/libopus/lib"
 		/LIBPATH:"$(NEST_LIBS)/libogg/lib"
-		#/LIBPATH:"$(NEST_LIBS)/harfbuzz/lib"
-		#/LIBPATH:"$(NEST_LIBS)/freetype/lib"
+		/LIBPATH:"$(NEST_LIBS)/harfbuzz/lib"
+		/LIBPATH:"$(NEST_LIBS)/freetype/lib"
 		/MANIFEST:EMBED
 		/MANIFESTINPUT:set-utf8-code-page.manifest
 	;
 	LINKLIBS =
 		SDL2main.lib SDL2.lib OpenGL32.lib Shell32.lib
-		libpng.lib zlib.lib opusfile.lib opus.lib libogg.lib #harfbuzz.lib freetype.lib
+		libpng.lib zlib.lib opusfile.lib opus.lib libogg.lib harfbuzz.lib freetype.lib
 	;
 
 	File SDL2.dll : $(NEST_LIBS)\\SDL2\\dist\\SDL2.dll ;

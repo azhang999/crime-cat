@@ -140,7 +140,7 @@ struct PlayMode : Mode {
     } player_walking, player_up_jump, player_down_jump, player_swat;
 
 	int score = 0;
-	float theta = 0;
+	float theta = -0.3f * (float)M_PI;
 	float phi = ((float)M_PI)/2.f;
 	float camera_radius = 10.0f;
 

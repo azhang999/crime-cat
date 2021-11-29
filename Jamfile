@@ -139,6 +139,7 @@ GAME_NAMES =
 	PlayMode
 	main
 	LitColorTextureProgram
+	BlobShadowTextureProgram
 	#ColorTextureProgram #not used right now, but you might want it
 	Sound
 	load_wav

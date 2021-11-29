@@ -72,8 +72,8 @@ void GameText::init_state(std::string script_path) {
     txt_file.open(script_path, std::ios::in);
     if (txt_file.is_open()) {
         while (getline(txt_file, line)) {
+            std::cout << line << std::endl;
             // Read text paragraphs as a sequence of lines, so we can't just loop over all lines
-            // uint8_t num_lines = stoi(line); 	// tells us how many phase text lines to read
             auto f_i = line.find(' ');
             uint8_t num_lines = stoi(line.substr(0, f_i));
             uint8_t font_type = stoi(line.substr(f_i));
@@ -89,12 +89,14 @@ void GameText::init_state(std::string script_path) {
             getline(txt_file,line);
         }
     }
-    
-    if (gamemode) {
+
+    if (PLAYMODE) {
         SCORE = lines.size();
         TIME = lines.size() + 1;
         COLLISION = lines.size() + 2;
     }
+
+    std::cout << "LINES SIZE: " << line.size() << std::endl;
 }
 
 void GameText::fill_state() {
@@ -104,18 +106,10 @@ void GameText::fill_state() {
         add_text_to_HBbuf(lines[i], font_ids[i]);
     }
 
-    if (gamemode) {
-        // Add special lines
-        add_text_to_HBbuf(score, 1);
-        add_text_to_HBbuf(time, 1);
-        add_text_to_HBbuf(collision, 1);
-    }
 }
 
-void GameText::edit_state(uint8_t buf_id, std::string new_line, glm::vec3 color) {
-    if (gamemode) {
-        // std::vector<char> new_chars(new_line.begin(), new_line.end());
-        // lines[buf_id] = new_chars;
+void GameText::edit_state(size_t buf_id, std::string new_line, glm::vec3 color) {
+    if (PLAYMODE) {
         // lines[buf_id].clear();
         // for (auto c : new_chars) lines[buf_id].push_back(c);
 
@@ -130,11 +124,18 @@ void GameText::edit_state(uint8_t buf_id, std::string new_line, glm::vec3 color)
             else if (buf_id == TIME)  time_color = color;
             else if (buf_id == COLLISION) collision_color = color;
         }
-
-        // Refill HB buffer
-        fill_state();
     }
 }
+
+void GameText::update_state() {
+    if (PLAYMODE) fill_state();
+
+    // Add special lines
+    add_text_to_HBbuf(score, 1);
+    add_text_to_HBbuf(time, 1);
+    add_text_to_HBbuf(collision, 1);
+}
+
 
 void GameText::add_text_to_HBbuf(std::vector<char> text, uint8_t font_id) {
     // Setup HB buffer - code from https://github.com/harfbuzz/harfbuzz-tutorial/blob/master/hello-harfbuzz-freetype.c
@@ -278,14 +279,31 @@ void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3
 
 void GameText::draw_text(float x, float y, glm::vec3 color) {
     auto height_offset = 50;
-    for (size_t i = 0; i < lines.size(); i++) {
-		render_text_buffer(i, x, y - height_offset, color, font_ids[i]);
-        height_offset += fonts[font_ids[i]].offset;
-	}
 
-    if (gamemode) {
+    if (PLAYMODE) {
+        // TODO: really not sure why 3 is the offset but oh well!
+        for (size_t i = 0; i < lines.size() - 3; i++) {
+            render_text_buffer(i, x, y - height_offset, color, font_ids[i]);
+            height_offset += fonts[font_ids[i]].offset;
+        }
+
         render_text_buffer(SCORE, score_loc.x, score_loc.y, score_color, 1);
         render_text_buffer(TIME, time_loc.x, time_loc.y, time_color, 1);
         render_text_buffer(COLLISION, collision_loc.x, collision_loc.y, collision_color, 1);
+        
+        if (GAMEOVER) {
+            size_t i = lines.size() - 3;
+            render_text_buffer(i, x, y - height_offset, glm::vec3(0.1f, 0.1f, 0.1f), font_ids[i]);
+            height_offset += fonts[font_ids[i]].offset + 100.0f;
+
+            i = lines.size() - 1;
+            render_text_buffer(i, x, y - height_offset, glm::vec3(0.4f, 0.1f, 0.1f), font_ids[i]);
+        }
+    }
+    else {
+        for (size_t i = 0; i < lines.size(); i++) {
+            render_text_buffer(i, x, y - height_offset, color, font_ids[i]);
+            height_offset += fonts[font_ids[i]].offset;
+        }
     }
 }

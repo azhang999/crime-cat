@@ -32,7 +32,8 @@ struct GameText {
 	// -------- Text State Routines ---------
 	void init_state(std::string script_path);
 	void fill_state();
-	void edit_state(uint8_t buf_id, std::string new_line, glm::vec3 color = glm::vec3(-1.0f));
+	void edit_state(size_t buf_id, std::string new_line, glm::vec3 color = glm::vec3(-1.0f));
+	void update_state();
 	void add_text_to_HBbuf(std::vector<char> text, uint8_t font_id);
 
 	// -------- Screen Text Initialization/Maintenance --------
@@ -45,21 +46,22 @@ struct GameText {
 	std::vector<hb_buffer_t *> hb_buffers;
 
 	// ------ Special fields for PlayMode-modifiable text ------
-	bool gamemode = false;
+	bool PLAYMODE = false;
+	bool GAMEOVER = false;
 	std::vector<char> score = {'0'};
 	std::vector<char> time = {'1',':','0','0'};
 	std::vector<char> collision = {' '};
 
-	uint8_t SCORE = 0;
-	uint8_t TIME = 1;
-	uint8_t COLLISION = 2;
+	size_t SCORE = 0;
+	size_t TIME = 1;
+	size_t COLLISION = 2;
 
 	glm::vec2 score_loc = glm::vec2(250.0f, 800.0f);
 	glm::vec2 time_loc = glm::vec2(1000.0f, 800.0f);
 	glm::vec2 collision_loc = glm::vec2(250.0f, 750.0f);
 
-	glm::vec3 score_color = glm::vec3(0.2f, 0.2f, 0.2f);
-	glm::vec3 time_color = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 score_color = glm::vec3(0.2f, 0.2f, 0.8f);
+	glm::vec3 time_color = glm::vec3(0.2f, 0.8f, 0.2f);
 	glm::vec3 collision_color = glm::vec3(0.2f, 0.2f, 0.2f);
 
 	// -------- Font Character Rendering --------

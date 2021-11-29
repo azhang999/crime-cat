@@ -538,7 +538,7 @@ PlayMode::PlayMode() :
     // AddFrame(cat_scene, *(shadow.drawable));
 
     // ------------- Setup text rendering ---------------
-    game_text.gamemode = true;
+    game_text.PLAYMODE = true;
     game_text.init_state(script_path);
     game_text.fill_state();
 }
@@ -728,7 +728,8 @@ void PlayMode::update(float elapsed) {
 
     game_timer.seconds -= elapsed;
     if (game_timer.seconds <= 0.f) {
-        game_over = true;
+        game_over = false;
+        game_text.GAMEOVER = true;
         game_timer.seconds = 0.f;
     }
 
@@ -1145,15 +1146,13 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     //     std::string message;
     //     if (game_over) {
     //         message = "Your Owner Came Back, GAME OVER!";
-    //     } else {
-    //         message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
-    //     }
-
+    //     } 
     // Draw text
     {
         game_text.edit_state(game_text.SCORE, std::to_string(score));
         game_text.edit_state(game_text.TIME, game_timer.to_string());
         game_text.edit_state(game_text.COLLISION, " e e e ");
+        game_text.update_state();
         game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
     }
 }

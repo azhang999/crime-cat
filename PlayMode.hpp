@@ -150,7 +150,7 @@ struct PlayMode : Mode {
 	float camera_radius = 10.0f;
 
 	struct GameTimer {
-		float seconds = 1.0f * 60.f;
+		float seconds = 0.1f * 60.f;
 		std::string to_string() {
 			int sec = static_cast<int>(std::round(seconds));
 			int minutes = sec / 60;

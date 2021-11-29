@@ -41,6 +41,7 @@ struct PlayMode : Mode {
 
     Scene::Transform *collide();
 	std::string capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth);
+    void interact_with_objects(float elapsed, std::string object_collide_name, glm::vec3 player_motion);
 
 	//----- game state -----
 

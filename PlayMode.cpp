@@ -251,6 +251,7 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 living_room_floor = drawable.transform;
             }
             if (drawable.transform->name == "Vase") {
+                printf("VASE OBJECT CREATED!!!!\n");
                 objects.back().has_sound = true;
                 objects.back().samples.push_back(&shattering);
             }
@@ -502,29 +503,40 @@ SurfaceType get_top_surface_type(Scene::Transform *transform) {
 }
 
 std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth) {
-    for (auto obj : *current_objects) {
-        if (obj.name == "Rug") continue; // Rug is kinda blocky
-        // if (obj.name == "Player") continue;
-        // if (obj.name == "Facing") continue;
-        // if (obj.name == "CatPlayer") continue;
+    for (int i = 0; i < 2; ++i) {
+        if (i == 0) {
+            switch_rooms(RoomType::LivingRoom);
+        } else {
+            switch_rooms(RoomType::Kitchen);
+        }
+        for (auto obj : *current_objects) {
+            if (obj.name == "Rug") continue; // Rug is kinda blocky
+            // if (obj.name == "Player") continue;
+            // if (obj.name == "Facing") continue;
+            // if (obj.name == "CatPlayer") continue;
 
-        // TODO uncomment this later, floor collisions are inevitable
-        // Set height to floor level when floor collision is detected?
-        if (obj.name == "Floor") continue;      
-        if (obj.name == current_obj.name) continue;
+            // TODO uncomment this later, floor collisions are inevitable
+            // Set height to floor level when floor collision is detected?
+            // if (obj.name == "Floor") continue;      
+            if (obj.name == current_obj.name) continue;
 
-        auto capsule = current_obj.capsule;
-        SurfaceType surface;
-        if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface, pen_normal, pen_depth)) {
-            // std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << ", direction: " 
-            // << glm::to_string(*pen_normal) << ", depth: " << *pen_depth << std::endl;
+            auto capsule = current_obj.capsule;
+            SurfaceType surface;
+            // printf("capsule tip: %f %f %f\n", capsule.tip.x, capsule.tip.y, capsule.tip.z);
+            // printf("capsule base: %f %f %f\n", capsule.base.x, capsule.base.y, capsule.base.z);
+            // printf("capsule radius: %f\n", capsule.radius);
 
-            // if (std::isnan((*pen_normal).x) || std::isnan((*pen_normal).x) || std::isnan((*pen_normal).z)) {
-            //     std::cout << "----------- nevermind ignore this it's nan -----------" << std::endl;
-            //     return "";
-            // }
+            if (capsule_bbox_collision(capsule.tip, capsule.base, capsule.radius, obj.transform->bbox, &surface, pen_normal, pen_depth)) {
+                // std::cout << "\n!!! CAPSULE COLLISION: " << obj.name << ", direction: " 
+                // << glm::to_string(*pen_normal) << ", depth: " << *pen_depth << std::endl;
 
-            return obj.name;
+                // if (std::isnan((*pen_normal).x) || std::isnan((*pen_normal).x) || std::isnan((*pen_normal).z)) {
+                //     std::cout << "----------- nevermind ignore this it's nan -----------" << std::endl;
+                //     return "";
+                // }
+
+                return obj.name;
+            }
         }
     }
     return "";
@@ -659,6 +671,329 @@ Scene::Transform *PlayMode::collide() {
     return collide_obj;
 }
 
+// ROOM OBJECTS COLLISION AND MOVEMENT START ------------------------
+void PlayMode::interact_with_objects(float elapsed, std::string object_collide_name, glm::vec3 player_motion) {
+
+    // PART 1:::::::::
+    auto switchout_mesh = [&](RoomObject &resolved_obj) {        
+        // std::cout << "===> Pos-collision, adding back " << resolved_obj.reaction_drawables[0].transform->name << std::endl;
+
+        // First delete resolved object's mesh
+        // TODO: use RemoveframeByName when current_scene is being used to differentiate collisions between rooms
+        bool is_livingroom = false;
+        if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
+            if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
+                std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+            }
+            else is_livingroom = false;
+        }
+        else is_livingroom = true;
+
+        // Then add drawable of the resulting mesh
+        if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+    };
+
+    auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
+        // Save current bounding box
+        for (auto i = 0; i < 8; i++) {
+            removed_obj.orig_bbox[i] = removed_obj.transform->bbox[i];
+            removed_obj.transform->bbox[i] = glm::vec3(-10000);
+        }
+        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
+        removed_obj.capsule.tip = glm::vec3(-10000);
+        removed_obj.capsule.base = glm::vec3(-10000);
+    };
+
+    // PART 2:::::::::::
+    switch_rooms(RoomType::LivingRoom);
+    auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
+                                        [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
+    if (collision_obj_iter == (*current_objects).end()) {
+        switch_rooms(RoomType::Kitchen);
+        collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
+                                        [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
+    }
+    RoomObject &collision_obj = *(collision_obj_iter);
+
+    if (object_collide_name == "Vase") {
+        if (collision_obj.collision_type != CollisionType::PushOff) {
+            printf("Vase has type !NOT! PushOff\n");
+            exit(1);
+        } else {
+            printf("Vase has type PushOff\n"); 
+        }
+    }
+
+    if (!collision_obj.done) {
+        switch (collision_obj.collision_type) {
+            case CollisionType::Steal: {
+                printf("Steal detected\n");
+                if (!player.swatting) break; // need to be swatting
+                score += 3;
+                collision_obj.done = true;
+                player.swatting = false;
+                player.swatting_timer = 0.f;
+
+                // Save current scale
+                collision_obj.orig_scale = collision_obj.transform->scale;
+                collision_obj.transform->scale = glm::vec3(0);
+                // Save current position
+                collision_obj.prev_position = collision_obj.transform->position;
+                collision_obj.transform->position = glm::vec3(-10000);
+                pseudo_remove_bbox(collision_obj);
+                break;
+            }
+            case CollisionType::Destroy: {
+                printf("Destroy detected\n");
+                if (!player.swatting) break; // need to be swatting
+                score += 5;
+                collision_obj.done = true;
+                player.swatting = false;
+
+                switchout_mesh(collision_obj);
+                pseudo_remove_bbox(collision_obj);
+
+                if(collision_obj.has_sound) {
+                    Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                }
+                break;
+            }
+            case CollisionType::KnockOver: {
+                printf("KnockOver detected\n");
+                score += 3;
+                collision_obj.done = true;
+
+                switchout_mesh(collision_obj);
+                pseudo_remove_bbox(collision_obj);
+                break;
+            }
+            case CollisionType::PushOff: {
+                printf("PUSH detected\n");
+                collision_obj.move_dir = glm::normalize(player_motion);
+                collision_obj.move_dir.z = 0.f;
+                collision_obj.is_moving = true;
+                printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
+                break;
+            }
+            default: {
+                // printf("Unknown CollisionType detected\n");
+            }
+        }
+    }
+
+//    if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
+//         // get velocity applied to object by player (get direction maybe hardcode the length of vector)
+//         collision_obj.move_dir = glm::normalize(player_motion);
+//         collision_obj.move_dir.z = 0.f;
+//         collision_obj.is_moving = true;
+//         printf("PUSH start\n");
+//         printf("dir x:%f y:%f z:%f\n", collision_obj.move_dir.x, collision_obj.move_dir.y, collision_obj.move_dir.z);
+        // get movement of player?/ rotation of player?
+
+        //
+
+        // only x,y no z
+        // start "motion"
+
+
+
+        // std::cout << "I have no idea why this is happening" << std::endl;
+        // Save object's original position
+        // collision_obj.prev_position = collision_obj.transform->position;
+
+        // // Calculate player's displacement in this timestep
+        // glm::vec3 offset = (player.transform_middle->position - prev_player_position);
+        // collision_obj.transform->position += offset;
+        // for (auto i = 0; i < 8; i++) {
+        //     collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i]; // Save original BBOX position
+        //     collision_obj.transform->bbox[i] += offset;                    // Update to new
+        // }
+
+        // // Test for collisions against other objects 
+        // if (capsule_collide(collision_obj, &collision_obj.pen_dir, &collision_obj.pen_depth) == "") {    // Move capsule in absence of collisions
+        //     collision_obj.capsule.tip  = collision_obj.capsule.tip  + (collision_obj.transform->position - collision_obj.prev_position);
+        //     collision_obj.capsule.base = collision_obj.capsule.base + (collision_obj.transform->position - collision_obj.prev_position);
+
+        //     if (!collision_obj.collided && 
+        //         !((collision_obj.x_min <= collision_obj.transform->bbox[5].x && collision_obj.transform->bbox[1].x <= collision_obj.x_max)
+        //         && (collision_obj.y_min <= collision_obj.transform->bbox[2].y && collision_obj.transform->bbox[1].y <= collision_obj.y_max))) {
+        //         collision_obj.is_falling = true;
+        //     }
+        // }
+        // else {  // ------- COLLISION OCCURED -------
+        //     // Slide-alone code inspired from https://wickedengine.net/2020/04/26/capsule-collision-detection/, "Usage"
+        //     // TODO: Assumes objects are off the same weight - can add per-object weights (i.e. heavier objects = slower velocities)
+        //     glm::vec3 obj_velocity = offset / elapsed; //(collision_obj.transform->position - collision_obj.prev_position) / elapsed;
+        //     float obj_velocity_length = glm::length(obj_velocity);
+        //     obj_velocity = glm::normalize(obj_velocity);
+
+        //     if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
+
+        //         // Fix velocity
+        //         glm::vec3 undesired_motion = collision_obj.pen_dir * glm::dot(collision_obj.pen_dir, obj_velocity);
+        //         glm::vec3 desired_motion = obj_velocity - undesired_motion;
+        //         obj_velocity = obj_velocity_length * desired_motion;
+
+        //         // Re-do object movement with displacement vector calculated using this new velocity
+        //         glm::vec3 displacement = obj_velocity * elapsed;
+        //         collision_obj.transform->position = collision_obj.prev_position + displacement;
+        //         for (auto i = 0; i < 8; i++) {
+        //             collision_obj.transform->bbox[i] = collision_obj.orig_bbox[i] + displacement;
+        //         }
+        //         collision_obj.capsule.tip  += displacement;
+        //         collision_obj.capsule.base += displacement;
+        //     }
+    //     // }
+    // }
+
+    // PART 3:::::::
+    // ##################### Resolve remaining collision behavior #####################
+    // simulate object motion
+     for (int i = 0; i < 2; ++i) {
+        if (i == 0) {
+            switch_rooms(RoomType::LivingRoom);
+        } else {
+            switch_rooms(RoomType::Kitchen);
+        }
+        for (auto &obj : *current_objects) {
+            if (obj.collision_type == CollisionType::PushOff && obj.is_moving && !obj.done) {
+                if (isnan(obj.transform->position.x)) {
+                    exit(1);
+                }
+                glm::vec3 orig_pos = obj.transform->position;
+
+                // execute horizontal movement
+                obj.transform->position += obj.move_dir * elapsed * 12.0f;
+                obj.capsule.tip = obj.transform->position;
+                obj.capsule.tip.z += obj.capsule.height/2;
+                obj.capsule.base = obj.transform->position;
+                obj.capsule.base.z  -= obj.capsule.height/2;
+                // obj.capsule.base.z -= 1.0f;
+                // TODO: taper off the horizontal movement (add acceleration)
+                // printf("Vase 1 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+
+                // check if horizontal movement caused collision
+                std::string horizontal_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
+                if (horizontal_collision_name != "") {
+                    printf("horizontal_collide: %s\n", horizontal_collision_name.c_str());
+                    // reflect
+                    obj.move_dir = glm::normalize(obj.pen_dir);
+                    // printf("pen_dir x:%f y:%f z:%f\n", obj.pen_dir.x, obj.pen_dir.y, obj.pen_dir.z);
+                    // printf("pen_depth %f\n", obj.pen_depth);
+                    
+                    glm::vec3 offset = ((obj.pen_depth + 0.1f) * obj.pen_dir);
+                    offset.z = 0.f;
+                    // printf("Vase 1.4 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                    obj.transform->position += offset;
+                    // printf("Vase 1.45 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                }
+                // printf("Vase 1.5 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+
+                glm::vec3 after_xy_move_pos = obj.transform->position;
+
+                // gravity - break if hits floor
+                obj.transform->position.z -= elapsed * 3.0f;
+                obj.capsule.tip = obj.transform->position;
+                obj.capsule.tip.z += obj.capsule.height/2;
+                obj.capsule.base = obj.transform->position;
+                obj.capsule.base.z  -= obj.capsule.height/2;
+                // obj.capsule.base.z -= 1.0f;
+
+                // printf("Vase 2 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
+                if (vertical_collision_name != "") {
+                    // printf("vertical_collide: %s\n", vertical_collision_name.c_str());
+                    // obj.transform->position = after_xy_move_pos;
+                    if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 0.5f) {
+                        // fell alot
+                        score += 5;
+                        obj.collided = true;  // prevents user from gaining more points
+                        obj.done = true;
+                        obj.transform->rotation = obj.orig_rotation;
+
+                        switchout_mesh(obj);
+                        if(collision_obj.has_sound) {
+                            Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                        }
+                    } else {
+                        // hasn't fallen that much - undo grav
+                        obj.transform->position = after_xy_move_pos;
+                    }
+                } else {
+                    // give object some rotation
+                    obj.transform->rotation *= glm::angleAxis(-9.0f * elapsed, glm::vec3(0, -1, 0));
+                }
+
+                printf("Vase 3 x:%f y:%f z:%f\n", obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+
+                // update bbox with new_pos - orig_pos
+                glm::vec3 total_obj_offset = obj.transform->position - orig_pos;
+                obj.transform->bbox[0] += total_obj_offset;
+                obj.transform->bbox[1] += total_obj_offset;
+                obj.transform->bbox[2] += total_obj_offset;
+                obj.transform->bbox[3] += total_obj_offset;
+                obj.transform->bbox[4] += total_obj_offset;
+                obj.transform->bbox[5] += total_obj_offset;
+                obj.transform->bbox[6] += total_obj_offset;
+                obj.transform->bbox[7] += total_obj_offset;
+
+
+            //     if (!obj.done && obj.is_falling) {
+
+            //         obj.air_time += elapsed;
+
+            //         float height = obj.start_height + 0.5f * gravity * obj.air_time * obj.air_time;
+            //         if (height <= obj.end_height) {
+
+            //             obj.transform->position.z = obj.end_height;
+            //             obj.capsule.base.z = obj.end_height;
+            //             obj.capsule.tip.z = obj.end_height + obj.capsule.height;
+
+            //             obj.is_falling = false;
+            //             obj.air_time = 0.0f;
+
+            //             obj.transform->bbox[5].z = obj.end_height + obj.capsule.height;
+            //             obj.transform->bbox[1].z = obj.end_height + obj.capsule.height;
+            //             obj.transform->bbox[2].z = obj.end_height + obj.capsule.height;
+            //             obj.transform->bbox[6].z = obj.end_height + obj.capsule.height;
+            //             obj.transform->bbox[0].z = obj.end_height;
+            //             obj.transform->bbox[3].z = obj.end_height;
+            //             obj.transform->bbox[4].z = obj.end_height;
+            //             obj.transform->bbox[7].z = obj.end_height;
+
+            //             score += 5;
+            //             obj.collided = true;  // prevents user from gaining more points
+            //             obj.done = true;
+
+            //             switchout_mesh(obj);
+            //             if(collision_obj.has_sound) {
+            //                 Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+            //             }
+            //         }
+            //         else {
+            //             obj.transform->position.z = height;
+            //             obj.capsule.base.z = height;
+            //             obj.capsule.tip.z = height + obj.capsule.height;
+
+            //             obj.transform->bbox[5].z = height + obj.capsule.height;
+            //             obj.transform->bbox[1].z = height + obj.capsule.height;
+            //             obj.transform->bbox[2].z = height + obj.capsule.height;
+            //             obj.transform->bbox[6].z = height + obj.capsule.height;
+            //             obj.transform->bbox[0].z = height;
+            //             obj.transform->bbox[3].z = height;
+            //             obj.transform->bbox[4].z = height;
+            //             obj.transform->bbox[7].z = height;
+            //         }
+            //     }
+            }
+        }
+    }
+
+}
+
+// ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
+
 void PlayMode::update(float elapsed) {
     if (game_over) return;
 
@@ -724,39 +1059,6 @@ void PlayMode::update(float elapsed) {
         if (!left.pressed && right.pressed)
             player.transform_middle->rotation *= glm::angleAxis(-3.0f * elapsed, up);
     }
-    
-    // #####################################################################
-    //                          Handle Collisions
-    // #####################################################################
-    auto switchout_mesh = [&](RoomObject &resolved_obj) {        
-        // std::cout << "===> Pos-collision, adding back " << resolved_obj.reaction_drawables[0].transform->name << std::endl;
-
-        // First delete resolved object's mesh
-        // TODO: use RemoveframeByName when current_scene is being used to differentiate collisions between rooms
-        bool is_livingroom = false;
-        if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-            if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-                std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
-            }
-            else is_livingroom = false;
-        }
-        else is_livingroom = true;
-
-        // Then add drawable of the resulting mesh
-        if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-    };
-
-    auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
-        // Save current bounding box
-        for (auto i = 0; i < 8; i++) {
-            removed_obj.orig_bbox[i] = removed_obj.transform->bbox[i];
-            removed_obj.transform->bbox[i] = glm::vec3(-10000);
-        }
-        // Move capsule tip and base, to be reset later (TODO: write a class helper that does this)
-        removed_obj.capsule.tip = glm::vec3(-10000);
-        removed_obj.capsule.base = glm::vec3(-10000);
-    };
 
     is_side_ = true;
     auto object_collide = collide();
@@ -766,107 +1068,12 @@ void PlayMode::update(float elapsed) {
         object_collide_name = object_collide->name;
     }
 
-    auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-                                        [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
-    RoomObject &collision_obj = *(collision_obj_iter);
-
-    // --------- Steal object ---------
-    if (player.swatting && collision_obj.collision_type == CollisionType::Steal && !collision_obj.done) {
-        score += 3;
-        collision_obj.done = true;
-        player.swatting = false;
-        player.swatting_timer = 0.f;
-
-        // Save current scale
-        collision_obj.orig_scale = collision_obj.transform->scale;
-        collision_obj.transform->scale = glm::vec3(0);
-        // Save current position
-        collision_obj.prev_position = collision_obj.transform->position;
-        collision_obj.transform->position = glm::vec3(-10000);
-        pseudo_remove_bbox(collision_obj);
-        
-        // std::cout << "Scale before: " << glm::to_string(collision_obj.orig_scale) << ", scale after: " << glm::to_string(collision_obj.transform->scale) << std::endl;
-
-        // TODO: debug this if object needs to be deleted
-        // Erase references to drawable and its object
-        // auto col_drawable_iter = find_if((*current_scene).drawables.begin(), (*current_scene).drawables.end(),
-        //                         [object_collide_name](const Scene::Drawable & elem) { return elem.transform->name == object_collide_name; });
-        // but pretty sure we want to keep this object around for later 
-        // if (col_drawable_iter != (*current_scene).drawables.end())
-        //     (*current_scene).drawables.erase(col_drawable_iter);
-        // (*current_objects).erase(obj_iter);
+    glm::vec3 player_motion = movement;
+    if (object_collide_name != "") {
+        printf("%s\n", object_collide_name.c_str());
     }
-    // --------- Destroy object ---------
-    else if (player.swatting && collision_obj.collision_type == CollisionType::Destroy && !collision_obj.done) {
-        score += 5;
-        collision_obj.done = true;
-        player.swatting = false;
+    interact_with_objects(elapsed, object_collide_name, player_motion);
 
-        switchout_mesh(collision_obj);
-        pseudo_remove_bbox(collision_obj);
-
-        if(collision_obj.has_sound) {
-            Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
-        }
-    }
-    // --------- Knock over object ---------
-    else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
-        score += 3;
-        collision_obj.done = true;
-
-        switchout_mesh(collision_obj);
-        pseudo_remove_bbox(collision_obj);
-    }
-    // --------- Push object off of surface ---------
-    else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
-        // std::cout << "I have no idea why this is happening" << std::endl;
-        // Save object's original position
-        collision_obj.prev_position = collision_obj.transform->position;
-
-        // Calculate player's displacement in this timestep
-        glm::vec3 offset = (player.transform_middle->position - prev_player_position);
-        collision_obj.transform->position += offset;
-        for (auto i = 0; i < 8; i++) {
-            collision_obj.orig_bbox[i] = collision_obj.transform->bbox[i]; // Save original BBOX position
-            collision_obj.transform->bbox[i] += offset;                    // Update to new
-        }
-
-        // Test for collisions against other objects 
-        if (capsule_collide(collision_obj, &collision_obj.pen_dir, &collision_obj.pen_depth) == "") {    // Move capsule in absence of collisions
-            collision_obj.capsule.tip  = collision_obj.capsule.tip  + (collision_obj.transform->position - collision_obj.prev_position);
-            collision_obj.capsule.base = collision_obj.capsule.base + (collision_obj.transform->position - collision_obj.prev_position);
-
-            if (!collision_obj.collided && 
-                !((collision_obj.x_min <= collision_obj.transform->bbox[5].x && collision_obj.transform->bbox[1].x <= collision_obj.x_max)
-                && (collision_obj.y_min <= collision_obj.transform->bbox[2].y && collision_obj.transform->bbox[1].y <= collision_obj.y_max))) {
-                collision_obj.is_falling = true;
-            }
-        }
-        else {  // ------- COLLISION OCCURED -------
-            // Slide-alone code inspired from https://wickedengine.net/2020/04/26/capsule-collision-detection/, "Usage"
-            // TODO: Assumes objects are off the same weight - can add per-object weights (i.e. heavier objects = slower velocities)
-            glm::vec3 obj_velocity = offset / elapsed; //(collision_obj.transform->position - collision_obj.prev_position) / elapsed;
-            float obj_velocity_length = glm::length(obj_velocity);
-            obj_velocity = glm::normalize(obj_velocity);
-
-            if (!glm::isnan(obj_velocity.x) && !glm::isnan(obj_velocity.y) && !glm::isnan(obj_velocity.z)) {
-
-                // Fix velocity
-                glm::vec3 undesired_motion = collision_obj.pen_dir * glm::dot(collision_obj.pen_dir, obj_velocity);
-                glm::vec3 desired_motion = obj_velocity - undesired_motion;
-                obj_velocity = obj_velocity_length * desired_motion;
-
-                // Re-do object movement with displacement vector calculated using this new velocity
-                glm::vec3 displacement = obj_velocity * elapsed;
-                collision_obj.transform->position = collision_obj.prev_position + displacement;
-                for (auto i = 0; i < 8; i++) {
-                    collision_obj.transform->bbox[i] = collision_obj.orig_bbox[i] + displacement;
-                }
-                collision_obj.capsule.tip  += displacement;
-                collision_obj.capsule.base += displacement;
-            }
-        }
-    }
     // --------- * collision with non interactable object occurred * ---------
     if (object_collide_name != "") { // undo movement
         // SOURCE: https://wickedengine.net/2020/04/26/capsule-collision-detection/
@@ -882,9 +1089,9 @@ void PlayMode::update(float elapsed) {
 
         int prev_num_collide_objs = num_collide_objs;
         auto new_collide_side = collide();
-        printf("num collide objs: %d\n", prev_num_collide_objs);
+        // printf("num collide objs: %d\n", prev_num_collide_objs);
         if (new_collide_side != nullptr || prev_num_collide_objs > 1) {
-            printf("restore transform!\n");
+            // printf("restore transform!\n");
             player.transform_middle->position = prev_player_position;
             player.transform_middle->rotation = prev_player_rotation;
             player.tip = prev_player_position;
@@ -894,58 +1101,6 @@ void PlayMode::update(float elapsed) {
         }
     }
 
-    // ##################### Resolve remaining collision behavior #####################
-    for (auto &obj : *current_objects) {
-        if (obj.collision_type == CollisionType::PushOff) {
-            if (!obj.done && obj.is_falling) {
-
-                obj.air_time += elapsed;
-
-                float height = obj.start_height + 0.5f * gravity * obj.air_time * obj.air_time;
-                if (height <= obj.end_height) {
-
-                    obj.transform->position.z = obj.end_height;
-                    obj.capsule.base.z = obj.end_height;
-                    obj.capsule.tip.z = obj.end_height + obj.capsule.height;
-
-                    obj.is_falling = false;
-                    obj.air_time = 0.0f;
-
-                    obj.transform->bbox[5].z = obj.end_height + obj.capsule.height;
-                    obj.transform->bbox[1].z = obj.end_height + obj.capsule.height;
-                    obj.transform->bbox[2].z = obj.end_height + obj.capsule.height;
-                    obj.transform->bbox[6].z = obj.end_height + obj.capsule.height;
-                    obj.transform->bbox[0].z = obj.end_height;
-                    obj.transform->bbox[3].z = obj.end_height;
-                    obj.transform->bbox[4].z = obj.end_height;
-                    obj.transform->bbox[7].z = obj.end_height;
-
-                    score += 5;
-                    obj.collided = true;  // prevents user from gaining more points
-                    obj.done = true;
-
-                    switchout_mesh(obj);
-                    if(collision_obj.has_sound) {
-                        Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
-                    }
-                }
-                else {
-                    obj.transform->position.z = height;
-                    obj.capsule.base.z = height;
-                    obj.capsule.tip.z = height + obj.capsule.height;
-
-                    obj.transform->bbox[5].z = height + obj.capsule.height;
-                    obj.transform->bbox[1].z = height + obj.capsule.height;
-                    obj.transform->bbox[2].z = height + obj.capsule.height;
-                    obj.transform->bbox[6].z = height + obj.capsule.height;
-                    obj.transform->bbox[0].z = height;
-                    obj.transform->bbox[3].z = height;
-                    obj.transform->bbox[4].z = height;
-                    obj.transform->bbox[7].z = height;
-                }
-            }
-        }
-    }
 
     // ######################### Resolve falling player #########################
 
@@ -1113,35 +1268,35 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         //     draw_lines.draw(D,H, glm::u8vec4(0x00, 0x00, 0x00, 0xff));
         // // }
 
-        draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        float r = player.radius;
+        // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // float r = player.radius;
 
-        glm::vec3 capsule0_tip = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
-        capsule0_tip.z += 1.0f;
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip, glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // glm::vec3 capsule0_tip = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+        // capsule0_tip.z += 1.0f;
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip, glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+        // draw_lines.draw(capsule0_tip + glm::vec3(0.f, 0.f, -r), capsule0_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-        glm::vec3 capsule1_tip = player.transform_middle->position;
-        capsule1_tip.z += 1.0f;
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // glm::vec3 capsule1_tip = player.transform_middle->position;
+        // capsule1_tip.z += 1.0f;
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, 0.f, -2*r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(0.f, -r, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(capsule1_tip + glm::vec3(0.f, 0.f, -r), capsule1_tip + glm::vec3(-r, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
-        //head bump
-        glm::vec3 head_bump = player.head_bump->make_local_to_world() * glm::vec4(player.head_bump->position, 1.0f);
-        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(head_bump, head_bump + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
-        draw_lines.draw(head_bump, head_bump + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // //head bump
+        // glm::vec3 head_bump = player.head_bump->make_local_to_world() * glm::vec4(player.head_bump->position, 1.0f);
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
+        // draw_lines.draw(head_bump, head_bump + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0x00, 0x00, 0xff));
 
         switch_rooms(RoomType::LivingRoom);
         for (auto &drawable : (*current_scene).drawables) {

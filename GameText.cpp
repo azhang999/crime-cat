@@ -1,10 +1,14 @@
+/* Game text drawing class
+ * Ported and heavily adapted from Emma's game4 (text game) code:
+ * https://github.com/emmaloool/InterviewTextGame
+ */
+
 #include "GameText.hpp"
 
 #include "TextTextureProgram.hpp" // Load to use for text
 #include "read_write_chunk.hpp"
 #include "Load.hpp"
 #include "gl_errors.hpp"
-#include "data_path.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -13,31 +17,29 @@
 
 GLuint VAO, VBO;
 
-GameText::GameText() {
+GameText::GameText() {  
+	{ // For each of the fonts, setup FT, HB font - code from https://learnopengl.com/In-Practice/Text-Rendering
+		fonts.push_back(Font(belligerent_font_path, 9000, 150));
+		fonts.push_back(Font(belligerent_font_path, 4800, 80));
+		fonts.push_back(Font(blok_font_path, 2400, 40));
+		fonts.push_back(Font(nunito_font_path, 2400, 40));
 
-}
+        for (auto &font: fonts) {
+            if (FT_Init_FreeType(&font.lib)) throw std::runtime_error("ERROR::FREETYPE: Could not init FreeType Library");
+            if (FT_New_Face(font.lib, const_cast<char *>(font.path.c_str()), 0, &(font.face))) throw std::runtime_error("ERROR::FREETYPE: Failed to load font");		// TODO use datapath for this please...
+            FT_Set_Char_Size(font.face, 0, font.height, 0,0);
+            if (FT_Load_Char(font.face, 'X', FT_LOAD_RENDER)) throw std::runtime_error("ERROR::FREETYPE: Failed to load Glyph");
 
-void GameText::setup(std::string font_path_, std::string script_path_) {
-    if (init) return;
-    script_path = script_path_;
-
-    // Setup FT, HB font - code from https://learnopengl.com/In-Practice/Text-Rendering
-	{
-		if (FT_Init_FreeType(&font_lib)) throw std::runtime_error("ERROR::FREETYPE: Could not init FreeType Library");
-		if (FT_New_Face(font_lib, const_cast<char *>(font_path_.c_str()), 0, &font_face)) throw std::runtime_error("ERROR::FREETYPE: Failed to load font");		// TODO use datapath for this please...
-		FT_Set_Char_Size(font_face, 0, 1800, 0,0);
-		if (FT_Load_Char(font_face, 'X', FT_LOAD_RENDER)) throw std::runtime_error("ERROR::FREETYPE: Failed to load Glyph");
-
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
-		
-		/* Create hb-ft font - needs to last the lifetime of the program */
-		hb_font = hb_ft_font_create_referenced(font_face);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+            
+            /* Create hb-ft font - needs to last the lifetime of the program */
+            font.hb_font = hb_ft_font_create_referenced(font.face);
+        }
 	}
-
-	// Back to following https://learnopengl.com/In-Practice/Text-Rendering - 
-	// configure VAO/VBO for texture quads
-	// -----------------------------------
-	{
+	
+	{ // configure VAO/VBO for texture quads
+        // Back to following https://learnopengl.com/In-Practice/Text-Rendering - 
+        // -----------------------------------
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
 		glBindVertexArray(VAO);
@@ -48,95 +50,92 @@ void GameText::setup(std::string font_path_, std::string script_path_) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}
-	
-    // Fill game state from text script
-	fill_state();	
 }
 
 GameText::~GameText() {
-    if (init) {
-        // Destroy FT, HB objects in reverse order of creation
-        // for (auto buf : hb_buffers) hb_buffer_destroy(hb_buffer);
-        // hb_buffers.clear();
-        hb_buffer_destroy(hb_buffer);
+    // Destroy FT, HB objects in reverse order of creation
+    for (auto buf : hb_buffers)  {
+        hb_buffer_destroy(buf);
+    }
+    hb_buffers.clear();
 
-        hb_font_destroy(hb_font);
-        FT_Done_Face(font_face);
-        FT_Done_FreeType(font_lib);
+    for (auto font : fonts) {
+        hb_font_destroy(font.hb_font);
+        FT_Done_Face(font.face);
+        FT_Done_FreeType(font.lib);
     }
 }
 
-void GameText::fill_state() {
-    // Read state from file
-    { 
-        std::fstream txt_file;
-        std::string line;
-        txt_file.open(script_path, std::ios::in);
-        if (txt_file.is_open()) {
-            while (getline(txt_file, line)) {
-                std::cout<< line <<std::endl;
+void GameText::init_state(std::string script_path) {
+    std::fstream txt_file;
+    std::string line;
+    txt_file.open(script_path, std::ios::in);
+    if (txt_file.is_open()) {
+        while (getline(txt_file, line)) {
+            // std::cout<< line <<std::endl;
 
-                // Read text paragraphs as a sequence of lines, so we can't just loop over all lines
-                uint8_t num_lines = stoi(line); 	// tells us how many phase text lines to read
+            // Read text paragraphs as a sequence of lines, so we can't just loop over all lines
+            // uint8_t num_lines = stoi(line); 	// tells us how many phase text lines to read
+            auto f_i = line.find(' ');
+            uint8_t num_lines = stoi(line.substr(0, f_i));
+            uint8_t font_type = stoi(line.substr(f_i));
 
-                // Add lines in this paragraph
-                for (uint8_t i = 0; i < num_lines; i++) {
-                    getline(txt_file, line);
-                    std::cout<< line <<std::endl;
-        
-                    // TODO: case for font, add character in front of text line to denote which font
-                    // size_t offset = 0;
-                    // if (line[0] == '#') {
-                    // 	offset = 1;
-                    // 	fonts.push_back(0);
-                    // }
-                    // else {
-                    // 	phase.fonts.push_back(0);
-                    // }
-
-                    std::vector<char> line_chars(line.begin(), line.end());
-                    add_text_to_HBbuf(line_chars, hb_font);
-                }
-
-                getline(txt_file,line);
+            // Add lines in this paragraph
+            for (uint8_t i = 0; i < num_lines; i++) {
+                getline(txt_file, line);
+                // std::cout<< line <<std::endl;
+    
+                font_ids.push_back(font_type);
+                std::vector<char> line_chars(line.begin(), line.end());
+                lines.push_back(line_chars);
             }
+
+            getline(txt_file,line);
         }
     }
 }
 
-void GameText::add_text_to_HBbuf(std::vector<char> text, hb_font_t *font) {
+void GameText::fill_state() {
+    hb_buffers.clear();
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        add_text_to_HBbuf(lines[i], font_ids[i]);
+    }
+}
+
+void GameText::add_text_to_HBbuf(std::vector<char> text, uint8_t font_id) {
     // Setup HB buffer - code from https://github.com/harfbuzz/harfbuzz-tutorial/blob/master/hello-harfbuzz-freetype.c
     // and http://www.manpagez.com/html/harfbuzz/harfbuzz-2.3.1/ch03s03.php
 
     /* Create hb-buffer and populate. */
-    hb_buffer = hb_buffer_create();
-    hb_buffer_add_utf8(hb_buffer, &text[0], (int)text.size(), 0, (int)text.size());
+    hb_buffer_t *buf = hb_buffer_create();
+    hb_buffer_add_utf8(buf, &text[0], (int)text.size(), 0, (int)text.size());
 
     /* Guess the script/language/direction */
-    hb_buffer_set_direction(hb_buffer, HB_DIRECTION_LTR);
-    hb_buffer_set_script(hb_buffer, HB_SCRIPT_LATIN);
-    hb_buffer_set_language(hb_buffer, hb_language_from_string("en",-1));
+    hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+    hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+    hb_buffer_set_language(buf, hb_language_from_string("en",-1));
 
     /* Shape it! */
-    hb_shape(font, hb_buffer, NULL, 0);
+    hb_shape(fonts[font_id].hb_font, buf, NULL, 0);
 
-    // hb_buffers.push_back(hb_buffer);
+    hb_buffers.push_back(buf);
 }
 
-void GameText::render_text(float x, float y, glm::vec3 color) {
+void GameText::render_text_buffer(uint32_t hb_index, float x, float y, glm::vec3 color, uint8_t font_id) {
 	glDisable(GL_DEPTH_TEST);
 
 	// Render text - again following https://learnopengl.com/In-Practice/Text-Rendering, function RenderText()
 	// Setup character render state to render text 
-	auto &Characters = characters;
-	FT_Face face = font_face;
+	auto &Characters = fonts[font_id].characters;
+	FT_Face face = fonts[font_id].face;
 	
 	// Our render state is associated with the shader program color_texture_program
 	glUseProgram(text_texture_program->program);
 	// According to the text rendering tutorial:
 	// "For rendering text we (usually) do not need perspective, and using an 
 	// orthographic projection matrix also allows us to specify all vertex coordinates in screen coordinates"
-	glm::mat4 projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
+	glm::mat4 projection = glm::ortho(0.0f, 1200.0f, 0.0f, 900.0f);
 	// (Again) according to the text rendering tutorial:
 	// "We set the projection matrix's bottom parameter to 0.0f 
 	// and its top parameter equal to the window's height. 
@@ -151,10 +150,13 @@ void GameText::render_text(float x, float y, glm::vec3 color) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(VAO);
 
+    // Get current HB buffer
+	hb_buffer_t *cur_buffer = hb_buffers[hb_index];
+
 	// Harbuzz buffer processing code from http://www.manpagez.com/html/harfbuzz/harfbuzz-2.3.1/ch03s03.php
 	// Get glyph and position information
 	unsigned int glyph_count;
-	hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(hb_buffer, &glyph_count);
+	hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(cur_buffer, &glyph_count);
 
 	// Iterate through all the necessary glyphs to render in this buffer
     for (uint8_t i = 0; i < glyph_count; i++)
@@ -239,4 +241,12 @@ void GameText::render_text(float x, float y, glm::vec3 color) {
 
 	glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void GameText::draw_text(float x, float y, glm::vec3 color) {
+    auto height_offset = 50;
+    for (size_t i = 0; i < hb_buffers.size(); i++) {
+		render_text_buffer(i, x, y - height_offset, color, font_ids[i]);
+        height_offset += fonts[font_ids[i]].offset;
+	}
 }

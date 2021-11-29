@@ -194,13 +194,13 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
 
         std::vector< Vertex > vertices;
         glm::u8vec4 white_color = glm::u8vec4(255, 255, 255, 255);
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, float(drawable_size.y), 0.0f), white_color, glm::vec2(0.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
+        vertices.emplace_back(glm::vec3(0.0f, float(drawable_size.y), 0.0f), white_color, glm::vec2(0.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f));
 
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), 0.0f, 0.0f), white_color, glm::vec2(1.0f, 0.0f)));
+        vertices.emplace_back(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), 0.0f, 0.0f), white_color, glm::vec2(1.0f, 0.0f));
 
         //upload vertices to vertex_buffer:
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer); //set vertex_buffer as current

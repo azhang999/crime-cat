@@ -120,11 +120,12 @@ SplashMode::SplashMode(std::shared_ptr< Mode > const &next_mode_) : next_mode(ne
         GL_ERRORS(); //PARANOIA: print out any OpenGL errors that may have happened
     }
 
-    game_text.setup(data_path("./font/Roboto-Regular.ttf"), data_path("./text/splash.txt"));
+    // ------------- Setup text rendering ---------------
+    game_text.init_state(data_path("./text/splash.txt"));
+    game_text.fill_state();
 
     // ------------- Start background music! ---------------
     bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
-
 }
 
 SplashMode::~SplashMode() {
@@ -142,53 +143,20 @@ SplashMode::~SplashMode() {
 }
 
 bool SplashMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
-
-	// if (evt.type == SDL_MOUSEMOTION) {
-	// 	//convert mouse from window pixels (top-left origin, +y is down) to clip space ([-1,1]x[-1,1], +y is up):
-	// 	glm::vec2 clip_mouse = glm::vec2(
-	// 		(evt.motion.x + 0.5f) / window_size.x * 2.0f - 1.0f,
-	// 		(evt.motion.y + 0.5f) / window_size.y *-2.0f + 1.0f
-	// 	);
-	// }
-    // TODO: temporary, until clicking on button regions is enabled
     if (evt.type == SDL_KEYDOWN) {
         if (evt.key.keysym.sym == SDLK_p) {
 			Mode::set_current(next_mode);
 			return true;
 		}
-        // if (evt.key.keysym.sym == SDLK_t) {
-        //     game_text.render_text(game_text.TEXT_START_X, game_text.TEXT_START_Y, glm::vec3(0.5f, 0.0f, 0.5f));
-        // }
     }
 	return false;
 }
 
 void SplashMode::update(float elapsed) {
-
-	// TODO: based on position of clicks
-
 }
 
 void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
-	//---- compute vertices to draw ----
-
-	//vertices will be accumulated into this list and then uploaded+drawn at the end of this function:
-	// std::vector< Vertex > vertices;
-
-	// //inline helper function for rectangle drawing:
-	// auto setup_rect_vertices = [&](glm::vec2 const &center, glm::vec2 const &radius, glm::u8vec4 const &color) {
-	// 	//draw rectangle as two CCW-oriented triangles:
-	// 	// vertices.emplace_back(glm::vec3(center.x-radius.x, center.y-radius.y, 0.0f), color, glm::vec2(0.0f, 1.0f));
-	// 	// vertices.emplace_back(glm::vec3(center.x+radius.x, center.y-radius.y, 0.0f), color, glm::vec2(1.0f, 1.0f));
-	// 	// vertices.emplace_back(glm::vec3(center.x+radius.x, center.y+radius.y, 0.0f), color, glm::vec2(0.0f, 0.0f));
-
-	// 	// vertices.emplace_back(glm::vec3(center.x-radius.x, center.y-radius.y, 0.0f), color, glm::vec2(0.0f, 0.0f));
-	// 	// vertices.emplace_back(glm::vec3(center.x+radius.x, center.y+radius.y, 0.0f), color, glm::vec2(1.0f, 1.0f));
-	// 	// vertices.emplace_back(glm::vec3(center.x-radius.x, center.y+radius.y, 0.0f), color, glm::vec2(1.0f, 1.0f));
-	// };
-
-    // TODO draw buttons with text or something
 
     //---- Drawing the background image ----
     // References code to draw background image texture as two screen-sized triangles:
@@ -206,13 +174,13 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
         std::vector< Vertex > vertices;
         glm::u8vec4 white_color = glm::u8vec4(255, 255, 255, 255);
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, float(drawable_size.y), 0.0f), white_color, glm::vec2(0.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
+        vertices.emplace_back(glm::vec3(0.0f, float(drawable_size.y), 0.0f), white_color, glm::vec2(0.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f));
 
-        vertices.emplace_back(Vertex(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f)));
-        vertices.emplace_back(Vertex(glm::vec3(float(drawable_size.x), 0.0f, 0.0f), white_color, glm::vec2(1.0f, 0.0f)));
+        vertices.emplace_back(glm::vec3(0.0f, 0.0f, 0.0f), white_color, glm::vec2(0.0f, 0.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), float(drawable_size.y), 0.0f), white_color, glm::vec2(1.0f, 1.0f));
+        vertices.emplace_back(glm::vec3(float(drawable_size.x), 0.0f, 0.0f), white_color, glm::vec2(1.0f, 0.0f));
 
         //upload vertices to vertex_buffer:
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer); //set vertex_buffer as current
@@ -231,7 +199,7 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
 
         //bind the solid white texture to location zero so things will be drawn just with their colors:
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, splash_tex);
+        glBindTexture(GL_TEXTURE_2D, white_tex);        // TODO change texture
 
         //run the OpenGL pipeline:
         glDrawArrays(GL_TRIANGLES, 0, GLsizei(vertices.size()));
@@ -250,5 +218,5 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
     }
 
     // Draw text
-    game_text.render_text(game_text.TEXT_START_X, game_text.TEXT_START_Y, glm::vec3(0.5f, 0.0f, 0.5f));
+    game_text.draw_text(game_text.CENTER_X - 350, game_text.CENTER_Y + 200, glm::vec3(0.25f, 0.25f, 0.25f));
 }

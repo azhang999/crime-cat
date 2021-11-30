@@ -200,9 +200,6 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-// Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
-// 	return new Sound::Sample(data_path("blippy_trance.wav"));
-// });
 // source: https://freesound.org/people/m_delaparra/sounds/338018/
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));

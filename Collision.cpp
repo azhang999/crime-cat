@@ -1,5 +1,8 @@
 #include "Collision.hpp"
 
+glm::vec3 center_ = glm::vec3(0.f);
+glm::vec3 tri_point_ = glm::vec3(0.f);
+bool is_side_ = false;
 
 glm::vec3 closest_point_on_line_segment(glm::vec3 A, glm::vec3 B, glm::vec3 Point) {
     glm::vec3 AB = B - A;
@@ -56,12 +59,12 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
             float distsq;
 
             glm::vec3 d = center - point1;
-            float best_distsq = dot(d, d);
+            float best_distsq = glm::dot(d, d);
             best_point = point1;
             intersection_vec = d;
         
             d = center - point2;
-            distsq = dot(d, d);
+            distsq = glm::dot(d, d);
             if (distsq < best_distsq) {
                 best_distsq = distsq;
                 best_point = point2;
@@ -75,6 +78,11 @@ bool sphere_triangle_collision(glm::vec3 center, float radius, glm::vec3 p0, glm
                 best_point = point3; 
                 intersection_vec = d;
             }
+        }
+
+        if (is_side_) {
+            center_ = center;
+            tri_point_ = best_point;
         }
         
         float len = glm::length(intersection_vec);
@@ -179,17 +187,25 @@ bool capsule_triangle_collision(glm::vec3 tip, glm::vec3 base, float radius, glm
 
 bool is_almost_up_vec(glm::vec3 &v) {
     glm::vec3 n_v = glm::normalize(v);
+    glm::vec3 n_v_swapped = n_v;
+    if (std::abs(n_v.x) > std::abs(n_v.y) && std::abs(n_v.x) > std::abs(n_v.z)) {
+        n_v_swapped.x = n_v.z;
+        n_v_swapped.z = n_v.x;
+    } else if (std::abs(n_v.y) > std::abs(n_v.x) && std::abs(n_v.y) > std::abs(n_v.z)) {
+        n_v_swapped.y = n_v.z;
+        n_v_swapped.z = n_v.y;
+    }
 
     float epsilon = 0.01f;
-    if (n_v.x >= epsilon || n_v.x <= -epsilon) {
+    if (n_v_swapped.x >= epsilon || n_v_swapped.x <= -epsilon) {
         return false;
     }
 
-    if (n_v.y >= epsilon || n_v.y <= -epsilon) {
+    if (n_v_swapped.y >= epsilon || n_v_swapped.y <= -epsilon) {
         return false;
     }
 
-    if (n_v.z >= epsilon + 1.0f || n_v.z <= -epsilon - 1.0f) {
+    if (n_v_swapped.z >= epsilon + 1.0f || n_v_swapped.z <= -epsilon - 1.0f) {
         return false;
     }
 

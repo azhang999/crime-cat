@@ -194,9 +194,25 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("blippy_trance.wav"));
 });
-
+// source: https://freesound.org/people/m_delaparra/sounds/338018/
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));
+});
+// source: https://freesound.org/people/InspectorJ/sounds/415765/
+Load< Sound::Sample > tearing(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("tearing.wav"));
+});
+// source: https://freesound.org/people/XTYL33/sounds/68223/
+Load< Sound::Sample > papers(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("papers.wav"));
+});
+// source: https://freesound.org/people/RoyalRose/sounds/560298/
+Load< Sound::Sample > clink(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("clink.wav"));
+});
+// source: https://freesound.org/people/budek/sounds/513481/
+Load< Sound::Sample > click(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("click.wav"));
 });
 
 float get_top_height(Scene::Transform *transform) {

@@ -214,6 +214,26 @@ Load< Sound::Sample > clink(LoadTagDefault, []() -> Sound::Sample const * {
 Load< Sound::Sample > click(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("click.wav"));
 });
+// source: https://freesound.org/people/ChristiaanAckermann21100333/sounds/593726/
+Load< Sound::Sample > pillow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("pillow.wav"));
+});
+// source: https://freesound.org/people/LG/sounds/73046/
+Load< Sound::Sample > door(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("door.wav"));
+});
+// source: https://freesound.org/people/nicholasdaryl/sounds/563457/
+Load< Sound::Sample > books(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("books.wav"));
+});
+// source: https://freesound.org/people/Debsound/sounds/168822/
+Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("trophy.wav"));
+});
+// source: https://freesound.org/people/dmadridp/sounds/233476/
+Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("typing.wav"));
+});
 
 float get_top_height(Scene::Transform *transform) {
     if (transform->top_stand) {
@@ -653,6 +673,27 @@ void PlayMode::generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &o
         else if (drawable.transform->name == "Bed Pillow.001")    type = CollisionType::KnockOver;
 
         objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Closet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&door);
+        }
+        if (drawable.transform->name == "Switch") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Alarm Clock") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Bed Pillow") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
+        if (drawable.transform->name == "Bed Pillow.001") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
     }
 }
 
@@ -671,6 +712,19 @@ void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &
         else if (drawable.transform->name == "Toilet Paper Roll")           type = CollisionType::Steal;
 
         objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Bathroom Sink Faucet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Bathtub Faucet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Towel") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
     }
 }
 
@@ -691,10 +745,28 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
 
         objects.push_back( RoomObject(drawable.transform, type) );
 
+        if (drawable.transform->name == "Desk Lamp") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&trophy);
+        }
+        if (drawable.transform->name == "Notebook") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&papers);
+        }
+        if (drawable.transform->name == "Laptop") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&typing); // can't hear this one?
+        }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
-            objects.back().has_sound = false;
+            // doesn't play sound when trophy hits the floor
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&trophy);
             objects.back().spin = true;
+        }
+        if (drawable.transform->name == "Books") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&books);
         }
     }
 }

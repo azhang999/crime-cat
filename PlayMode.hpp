@@ -24,7 +24,10 @@ struct PlayMode : Mode {
 		None,
 		LivingRoom,
 		Kitchen,
-		// Bathroom
+		Bathroom,
+        Office,
+        Bedroom,
+        WallsDoorsFloorsStairs
 	};
 
 	//functions called by main loop:
@@ -35,7 +38,13 @@ struct PlayMode : Mode {
     void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
 
-	void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
+    void generate_wdfs_objects(Scene &scene, std::vector<RoomObject> &objects);
+	void generate_living_room_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_office_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
 	float get_surface_below_height(float &closest_dist);
 	// void check_room();
@@ -55,7 +64,7 @@ struct PlayMode : Mode {
 	} left, right, down, up, space, swat;
 
 	// ------------------ Rooms ------------------
-	RoomType current_room = RoomType::LivingRoom;
+	// RoomType current_room = RoomType::LivingRoom;
 	Scene *current_scene = nullptr;
 	std::vector<RoomObject> *current_objects = nullptr;
 
@@ -63,9 +72,27 @@ struct PlayMode : Mode {
 	Scene cat_scene;
     Scene living_room_scene;
     Scene kitchen_scene;
+    Scene wdfs_scene;
+    Scene bedroom_scene;
+    Scene bathroom_scene;
+    Scene office_scene;
 
 	std::vector<RoomObject> living_room_objects;
 	std::vector<RoomObject> kitchen_objects;
+    std::vector<RoomObject> wdfs_objects;
+    std::vector<RoomObject> bedroom_objects;
+    std::vector<RoomObject> bathroom_objects;
+    std::vector<RoomObject> office_objects;
+
+    // hardcode all rooms in for now
+    std::vector<RoomType> current_rooms = {
+        WallsDoorsFloorsStairs, 
+        LivingRoom, 
+        Kitchen, 
+        Bedroom, 
+        Bathroom,
+        Office
+    };
 
 	// save floors of all rooms specially for collisions to avoid lookups
 	Scene::Transform *living_room_floor = nullptr;

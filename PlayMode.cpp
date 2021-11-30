@@ -38,6 +38,38 @@ Load< MeshBuffer > kitchen_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+GLuint walls_doors_floors_stairs_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > walls_doors_floors_stairs_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating walls_doors_floors_stairs Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("walls_doors_floors_stairs.pnct"), data_path("walls_doors_floors_stairs.boundbox"));
+	walls_doors_floors_stairs_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
+GLuint bedroom_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > bedroom_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Bedroom Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("bedroom.pnct"), data_path("bedroom.boundbox"));
+	bedroom_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
+GLuint bathroom_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > bathroom_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Bathroom Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("bathroom.pnct"), data_path("bathroom.boundbox"));
+	bathroom_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
+GLuint office_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > office_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Office Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("office.pnct"), data_path("office.boundbox"));
+	office_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
 // angle in radians between two 3d vectors
 float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
@@ -88,6 +120,70 @@ Load< Scene > kitchen_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = kitchen_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > walls_doors_floors_stairs_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("walls_doors_floors_stairs.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = walls_doors_floors_stairs_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = walls_doors_floors_stairs_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > bedroom_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bedroom.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = bedroom_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = bedroom_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > bathroom_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bathroom.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = bathroom_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = bathroom_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("office.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = office_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = office_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -350,58 +446,67 @@ void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
     }
 }
 
-void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
-
-    if (room_type == RoomType::LivingRoom) {
-        float rug_height = 0.0f;
-        float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
-
-        for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name == "Player") continue;
-            if ((drawable.transform->name).find("Collide") != std::string::npos) {
-                continue;       // Save these in a second pass
-            }
-            
-            CollisionType type = CollisionType::None;  
-            if (drawable.transform->name == "Vase")             type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")         type = CollisionType::Steal;
-            else if (drawable.transform->name == "Mug")         type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Magazine")    type = CollisionType::KnockOver;
-
+void PlayMode::generate_wdfs_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name.find("Door") == std::string::npos && 
+            drawable.transform->name.find("Pass") == std::string::npos) {
+            CollisionType type = CollisionType::None;
             objects.push_back( RoomObject(drawable.transform, type) );
-
-            if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
-            if (drawable.transform->name == "SideTable") {
-                sidetable_x_min = drawable.transform->bbox[1].x;
-                sidetable_x_max = drawable.transform->bbox[5].x;
-                sidetable_y_min = drawable.transform->bbox[1].y;
-                sidetable_y_max = drawable.transform->bbox[2].y;
-            }
-            if (drawable.transform->name == "Floor") {
-                living_room_floor = drawable.transform;
-            }
-            if (drawable.transform->name == "Vase") {
-                objects.back().given_speed = 3.0f;
-                objects.back().has_sound = true;
-                objects.back().samples.push_back(&shattering);
-                objects.back().spin = true;
-            }
         }
 
-        // ----- Search for FALLING objects to set start/end heights -----
-        auto vase_iter = find_if(objects.begin(), objects.end(),
-                                [](const RoomObject &elem) { return elem.transform->name == "Vase"; });
-        RoomObject &vase_obj = *(vase_iter);
-        vase_obj.start_height = vase_obj.transform->position.z;
-        vase_obj.end_height   = rug_height;
-        vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
-        vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
+        if (drawable.transform->name == "First Floor") {
+            living_room_floor = drawable.transform;
+        }
+    }
+}
+
+void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    float rug_height = 0.0f;
+    float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
+
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Vase")             type = CollisionType::PushOff;
+        else if (drawable.transform->name == "Key")         type = CollisionType::Steal;
+        else if (drawable.transform->name == "Mug")         type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Magazine")    type = CollisionType::KnockOver;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
+        if (drawable.transform->name == "SideTable") {
+            sidetable_x_min = drawable.transform->bbox[1].x;
+            sidetable_x_max = drawable.transform->bbox[5].x;
+            sidetable_y_min = drawable.transform->bbox[1].y;
+            sidetable_y_max = drawable.transform->bbox[2].y;
+        }
+        if (drawable.transform->name == "Vase") {
+            objects.back().given_speed = 3.0f;
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&shattering);
+            objects.back().spin = true;
+        }
     }
 
-    else if (room_type == RoomType::Kitchen) {
-        float floor_height = 0.0f;
+    // ----- Search for FALLING objects to set start/end heights -----
+    auto vase_iter = find_if(objects.begin(), objects.end(),
+                            [](const RoomObject &elem) { return elem.transform->name == "Vase"; });
+    RoomObject &vase_obj = *(vase_iter);
+    vase_obj.start_height = vase_obj.transform->position.z;
+    vase_obj.end_height   = rug_height;
+    vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
+    vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
+}
+
+void PlayMode::generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    float floor_height = 0.0f;
         float island_x_min = 0, island_x_max = 0, island_y_min = 0, island_y_max = 0;
 
         for (auto &drawable : scene.drawables) {
@@ -466,6 +571,103 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         plate2.end_height   = floor_height;
         plate2.x_min = island_x_min; plate2.x_max = island_x_max;
         plate2.y_min = island_y_min; plate2.y_max = island_y_max;
+}
+
+void PlayMode::generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Closet")             type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Slipper")         type = CollisionType::Steal;
+        else if (drawable.transform->name == "Slipper.001")         type = CollisionType::Steal;
+        else if (drawable.transform->name == "Switch")      type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Sock")  type = CollisionType::Steal;
+        else if (drawable.transform->name == "Meds")    type = CollisionType::Steal;
+        else if (drawable.transform->name == "Alarm Clock")    type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Bed Pillow")    type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Bed Pillow.001")    type = CollisionType::KnockOver;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+    }
+}
+
+void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Toothbrush")                       type = CollisionType::Steal;
+        else if (drawable.transform->name == "Bathroom Sink Faucet")        type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Bathtub Faucet")              type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Towel")                       type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Toilet Paper Roll")           type = CollisionType::Steal;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+    }
+}
+
+void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Desk Lamp")                       type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Notebook")        type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Laptop Screen")              type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Trophy")                       type = CollisionType::PushOff;
+        else if (drawable.transform->name == "Books")           type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Armchair Seat")           type = CollisionType::Destroy;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Trophy") {
+            objects.back().given_speed = 3.0f;
+            objects.back().has_sound = false;
+            objects.back().spin = true;
+        }
+    }
+}
+
+void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
+    switch (room_type) {
+        case RoomType::LivingRoom: {
+            generate_living_room_objects(scene, objects);
+            break;
+        }
+        case RoomType::Kitchen: {
+            generate_kitchen_objects(scene, objects);
+            break;
+        }
+        case RoomType::WallsDoorsFloorsStairs: {
+            generate_wdfs_objects(scene, objects);
+            break;
+        }
+        case RoomType::Bedroom: {
+            generate_bedroom_objects(scene, objects);
+            break;
+        }
+        case RoomType::Bathroom: {
+            generate_bathroom_objects(scene, objects);
+            break;
+        }
+        case RoomType::Office: {
+            generate_office_objects(scene, objects);
+            break;
+        }
+        default: {
+            printf("ERROR Room Type: %d not implemented yet\n", room_type);
+            exit(1);
+        }
     }
 
     // Applies for all rooms
@@ -486,20 +688,53 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
 }
 
 void PlayMode::switch_rooms(RoomType room_type) {
-    if (room_type == RoomType::LivingRoom) {
-        current_room = RoomType::LivingRoom;
-        current_scene   = &living_room_scene;
-        current_objects = &living_room_objects;
-    }
-    else if (room_type == RoomType::Kitchen) {
-        current_room = RoomType::Kitchen;
-        current_scene   = &kitchen_scene;
-        current_objects = &kitchen_objects;
+    switch (room_type) {
+        case RoomType::LivingRoom: {
+            current_scene   = &living_room_scene;
+            current_objects = &living_room_objects;
+            break;
+        }
+        case RoomType::Kitchen: {
+            current_scene   = &kitchen_scene;
+            current_objects = &kitchen_objects;
+            break;
+        }
+        case RoomType::WallsDoorsFloorsStairs: {
+            current_scene   = &wdfs_scene;
+            current_objects = &wdfs_objects;
+            break;
+        }
+        case RoomType::Bedroom: {
+            current_scene   = &bedroom_scene;
+            current_objects = &bedroom_objects;
+            break;
+        }
+        case RoomType::Bathroom: {
+            current_scene   = &bathroom_scene;
+            current_objects = &bathroom_objects;
+            break;
+        }
+        case RoomType::Office: {
+            current_scene   = &office_scene;
+            current_objects = &office_objects;
+            break;
+        }
+        default: {
+            printf("ERROR (switch_room) Room Type: %d not implemented yet\n", room_type);
+            exit(1);
+            break;
+        }
     }
 }
 
 PlayMode::PlayMode() : 
-    cat_scene(*cat_scene_load), living_room_scene(*living_room_scene_load), kitchen_scene(*kitchen_scene_load) {
+    cat_scene(*cat_scene_load), 
+    living_room_scene(*living_room_scene_load), 
+    kitchen_scene(*kitchen_scene_load),
+    wdfs_scene(*walls_doors_floors_stairs_scene_load),
+    bedroom_scene(*bedroom_scene_load),
+    bathroom_scene(*bathroom_scene_load),
+    office_scene(*office_scene_load) {
     
     GenerateBBox(cat_scene, cat_meshes);
 
@@ -526,6 +761,10 @@ PlayMode::PlayMode() :
 
     GenerateBBox(living_room_scene, living_room_meshes);
     GenerateBBox(kitchen_scene, kitchen_meshes);
+    GenerateBBox(wdfs_scene, walls_doors_floors_stairs_meshes);
+    GenerateBBox(bedroom_scene, bedroom_meshes);
+    GenerateBBox(bathroom_scene, bathroom_meshes);
+    GenerateBBox(office_scene, office_meshes);
 
     // ##################################################################
     //          Premature optimization is the root of all evil :)
@@ -533,6 +772,10 @@ PlayMode::PlayMode() :
 
     generate_room_objects(living_room_scene, living_room_objects, RoomType::LivingRoom);
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
+    generate_room_objects(wdfs_scene, wdfs_objects, RoomType::WallsDoorsFloorsStairs);
+    generate_room_objects(bedroom_scene, bedroom_objects, RoomType::Bedroom);
+    generate_room_objects(bathroom_scene, bathroom_objects, RoomType::Bathroom);
+    generate_room_objects(office_scene, office_objects, RoomType::Office);
 
     // ----- Start in living room -----
     switch_rooms(RoomType::LivingRoom);
@@ -645,12 +888,8 @@ SurfaceType get_top_surface_type(Scene::Transform *transform) {
 }
 
 std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth) {
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
         for (auto obj : *current_objects) {
             if (obj.name == "Rug") continue; // Rug is kinda blocky      
             if (obj.name == current_obj.name) continue;
@@ -667,12 +906,8 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
 }
 
 std::string PlayMode::paw_collide() {
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+   for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
 
         for (auto obj : *current_objects) {
             if (obj.collision_type != CollisionType::Steal && obj.collision_type != CollisionType::Destroy) continue;
@@ -705,12 +940,8 @@ Scene::Transform *PlayMode::collide() {
     glm::vec3 best_pen_normal = glm::vec3(0.f);
     float best_pen_depth = 0.f;
 
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
 
         for (auto obj : *current_objects) {
             if (obj.name == "Rug") continue; // Rug is kinda blocky
@@ -758,18 +989,43 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
         // First delete resolved object's mesh
         // TODO: use RemoveframeByName when current_scene is being used to differentiate collisions between rooms
-        bool is_livingroom = false;
-        if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-            if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-                std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+        bool deleted = false;
+        for (auto room_type : current_rooms) {
+            switch_rooms(room_type);
+            if (RemoveFrameByName(*current_scene, resolved_obj.name)) {
+                current_scene->drawables.push_back(resolved_obj.reaction_drawables[0]);
+                deleted = true;
+                break;
             }
-            else is_livingroom = false;
         }
-        else is_livingroom = true;
 
-        // Then add drawable of the resulting mesh
-        if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        if (!deleted) {
+            std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+        }
+
+        // if (RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
+        //     living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
+        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
+        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        // } else {
+        //     std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+        // }
+
+
+        // bool is_livingroom = false;
+        // if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
+        //     if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
+        //         std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
+        //     }
+        //     else is_livingroom = false;
+        // }
+        // else is_livingroom = true;
+
+        // // Then add drawable of the resulting mesh
+        // if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
+        // else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
     };
 
     auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
@@ -791,13 +1047,12 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
-    switch_rooms(RoomType::LivingRoom);
-    auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-                                        [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
-    if (collision_obj_iter == (*current_objects).end()) {
-        switch_rooms(RoomType::Kitchen);
+    std::vector<RoomObject>::iterator collision_obj_iter;
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
         collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
+        if (collision_obj_iter != (*current_objects).end()) break;
     }
     RoomObject &collision_obj = *(collision_obj_iter);
 
@@ -859,12 +1114,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
     // ##################### Resolve remaining collision behavior #####################
     // simulate object motion
-     for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+
         for (auto &obj : *current_objects) {
             if (obj.collision_type == CollisionType::PushOff && !obj.done) {
                 if (isnan(obj.transform->position.x)) {
@@ -1170,19 +1422,28 @@ void PlayMode::update(float elapsed) {
 
         float radius = camera_radius;
         // loop  through all drawables in each scene
-        for (auto &drawable : living_room_scene.drawables) {
-            // if (bbox_distance(drawable.transform->bbox) < radius) {
-            //     std::cout << drawable.transform->name << std::endl;
-            // }
-            // manually skip some items with weird bbox's
-            if (drawable.transform->name == "Magazine Collided"
-            ||  drawable.transform->name == "Mug Collided")
-                continue;
-            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        for (auto room_type : current_rooms) {
+            switch_rooms(room_type);
+            for (auto &drawable : current_scene->drawables) {
+                 if (drawable.transform->name == "Magazine Collided"
+                ||  drawable.transform->name == "Mug Collided")
+                    continue;
+                radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+            }
         }
-        for (auto &drawable : kitchen_scene.drawables) {
-            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
-        }
+        // for (auto &drawable : living_room_scene.drawables) {
+        //     // if (bbox_distance(drawable.transform->bbox) < radius) {
+        //     //     std::cout << drawable.transform->name << std::endl;
+        //     // }
+        //     // manually skip some items with weird bbox's
+        //     if (drawable.transform->name == "Magazine Collided"
+        //     ||  drawable.transform->name == "Mug Collided")
+        //         continue;
+        //     radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        // }
+        // for (auto &drawable : kitchen_scene.drawables) {
+        //     radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        // }
 
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
         glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -1232,38 +1493,46 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
-    living_room_scene.draw(*player.camera);
-    kitchen_scene.draw(*player.camera);
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+        current_scene->draw(*player.camera);
+    }
+    // wdfs_scene.draw(*player.camera);
+    // living_room_scene.draw(*player.camera);
+    // kitchen_scene.draw(*player.camera);
 
-    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-    //     glDisable(GL_DEPTH_TEST);
-    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+        glDisable(GL_DEPTH_TEST);
+        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-    //     switch_rooms(RoomType::Kitchen);
-    //     for (auto obj : (*current_objects)) {
-    //         if (obj.collision_type != CollisionType::PushOff) continue;
-    //         auto tip = obj.capsule.tip;
-    //         auto base = obj.capsule.base;
-    //         auto r = obj.capsule.radius;
+        for (auto room_type : current_rooms) {
+            switch_rooms(room_type);
+        
+            for (auto obj : (*current_objects)) {
+                if (obj.collision_type != CollisionType::PushOff) continue;
+                auto tip = obj.capsule.tip;
+                auto base = obj.capsule.base;
+                auto r = obj.capsule.radius;
 
-    //         // tip
-    //         glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                // tip
+                glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
+                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-    //         // base
-    //         glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
-    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //         draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-    //     }
+                // base
+                glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
+                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+                draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+            }
+        }
 
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
@@ -1344,7 +1613,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
     //     }
 
-    // }
+    }
 
 	{ //use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);

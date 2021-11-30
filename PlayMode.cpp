@@ -1299,9 +1299,13 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
-    wdfs_scene.draw(*player.camera);
-    living_room_scene.draw(*player.camera);
-    kitchen_scene.draw(*player.camera);
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+        current_scene->draw(*player.camera);
+    }
+    // wdfs_scene.draw(*player.camera);
+    // living_room_scene.draw(*player.camera);
+    // kitchen_scene.draw(*player.camera);
 
     // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
     //     glDisable(GL_DEPTH_TEST);

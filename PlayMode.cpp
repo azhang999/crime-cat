@@ -54,6 +54,14 @@ Load< MeshBuffer > bedroom_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+GLuint bathroom_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > bathroom_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Bathroom Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("bathroom.pnct"), data_path("bathroom.boundbox"));
+	bathroom_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
 // angle in radians between two 3d vectors
 float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
@@ -136,6 +144,22 @@ Load< Scene > bedroom_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = bedroom_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > bathroom_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bathroom.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = bathroom_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = bathroom_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -547,6 +571,24 @@ void PlayMode::generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &o
     }
 }
 
+void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Toothbrush")                       type = CollisionType::Steal;
+        else if (drawable.transform->name == "Bathroom Sink Faucet")        type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Bathtub Faucet")              type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Towel")                       type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Toilet Paper Roll")           type = CollisionType::Steal;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+    }
+}
+
 void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
     switch (room_type) {
         case RoomType::LivingRoom: {
@@ -563,6 +605,10 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         }
         case RoomType::Bedroom: {
             generate_bedroom_objects(scene, objects);
+            break;
+        }
+        case RoomType::Bathroom: {
+            generate_bathroom_objects(scene, objects);
             break;
         }
         default: {
@@ -610,6 +656,11 @@ void PlayMode::switch_rooms(RoomType room_type) {
             current_objects = &bedroom_objects;
             break;
         }
+        case RoomType::Bathroom: {
+            current_scene   = &bathroom_scene;
+            current_objects = &bathroom_objects;
+            break;
+        }
         default: {
             printf("ERROR (switch_room) Room Type: %d not implemented yet\n", room_type);
             exit(1);
@@ -623,7 +674,8 @@ PlayMode::PlayMode() :
     living_room_scene(*living_room_scene_load), 
     kitchen_scene(*kitchen_scene_load),
     wdfs_scene(*walls_doors_floors_stairs_scene_load),
-    bedroom_scene(*bedroom_scene_load) {
+    bedroom_scene(*bedroom_scene_load),
+    bathroom_scene(*bathroom_scene_load) {
     
     GenerateBBox(cat_scene, cat_meshes);
 
@@ -652,6 +704,7 @@ PlayMode::PlayMode() :
     GenerateBBox(kitchen_scene, kitchen_meshes);
     GenerateBBox(wdfs_scene, walls_doors_floors_stairs_meshes);
     GenerateBBox(bedroom_scene, bedroom_meshes);
+    GenerateBBox(bathroom_scene, bathroom_meshes);
 
     // ##################################################################
     //          Premature optimization is the root of all evil :)
@@ -661,6 +714,7 @@ PlayMode::PlayMode() :
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
     generate_room_objects(wdfs_scene, wdfs_objects, RoomType::WallsDoorsFloorsStairs);
     generate_room_objects(bedroom_scene, bedroom_objects, RoomType::Bedroom);
+    generate_room_objects(bathroom_scene, bathroom_objects, RoomType::Bathroom);
 
     // ----- Start in living room -----
     switch_rooms(RoomType::LivingRoom);

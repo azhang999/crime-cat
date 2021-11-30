@@ -32,6 +32,9 @@ all : \
 	$(DIST)/bedroom.pnct \
 	$(DIST)/bedroom.scene \
 	$(DIST)/bedroom.boundbox \
+	$(DIST)/bathroom.pnct \
+	$(DIST)/bathroom.scene \
+	$(DIST)/bathroom.boundbox \
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
@@ -77,3 +80,12 @@ $(DIST)/bedroom.pnct : bedroom.blend $(EXPORT_MESHES)
 
 $(DIST)/bedroom.boundbox : bedroom.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bedroom '$@'
+
+$(DIST)/bathroom.scene : bathroom.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Bathroom '$@'
+
+$(DIST)/bathroom.pnct : bathroom.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Bathroom '$@'
+
+$(DIST)/bathroom.boundbox : bathroom.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bathroom '$@'

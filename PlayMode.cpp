@@ -200,12 +200,48 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("blippy_trance.wav"));
-});
-
+// Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
+// 	return new Sound::Sample(data_path("blippy_trance.wav"));
+// });
+// source: https://freesound.org/people/m_delaparra/sounds/338018/
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));
+});
+// source: https://freesound.org/people/InspectorJ/sounds/415765/
+Load< Sound::Sample > tearing(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("tearing.wav"));
+});
+// source: https://freesound.org/people/XTYL33/sounds/68223/
+Load< Sound::Sample > papers(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("papers.wav"));
+});
+// source: https://freesound.org/people/RoyalRose/sounds/560298/
+Load< Sound::Sample > clink(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("clink.wav"));
+});
+// source: https://freesound.org/people/budek/sounds/513481/
+Load< Sound::Sample > click(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("click.wav"));
+});
+// source: https://freesound.org/people/ChristiaanAckermann21100333/sounds/593726/
+Load< Sound::Sample > pillow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("pillow.wav"));
+});
+// source: https://freesound.org/people/LG/sounds/73046/
+Load< Sound::Sample > door(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("door.wav"));
+});
+// source: https://freesound.org/people/nicholasdaryl/sounds/563457/
+Load< Sound::Sample > books(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("books.wav"));
+});
+// source: https://freesound.org/people/Debsound/sounds/168822/
+Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("trophy.wav"));
+});
+// source: https://freesound.org/people/dmadridp/sounds/233476/
+Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("typing.wav"));
 });
 
 float get_top_height(Scene::Transform *transform) {
@@ -487,6 +523,23 @@ void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject
             objects.back().samples.push_back(&shattering);
             objects.back().spin = true;
         }
+
+        if (drawable.transform->name == "Pillow") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&tearing);
+        }
+        if (drawable.transform->name == "Pillow.001") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&tearing);
+        }
+        if (drawable.transform->name == "Mug") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&clink);
+        }
+        if (drawable.transform->name == "Magazine") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&papers);
+        }
     }
 
     // ----- Search for FALLING objects to set start/end heights -----
@@ -547,6 +600,34 @@ void PlayMode::generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &o
                 objects.back().samples.push_back(&shattering);
                 objects.back().given_speed = 6.0f;
             }
+            if (drawable.transform->name == "Pan") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&clink);
+            }
+            if (drawable.transform->name == "Pan.001") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&clink);
+            }
+            if (drawable.transform->name == "Faucet") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.001") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.002") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.003") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
         }
 
         // ----- Search for FALLING objects to set start/end heights -----
@@ -586,6 +667,27 @@ void PlayMode::generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &o
         else if (drawable.transform->name == "Bed Pillow.001")    type = CollisionType::KnockOver;
 
         objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Closet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&door);
+        }
+        if (drawable.transform->name == "Switch") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Alarm Clock") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Bed Pillow") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
+        if (drawable.transform->name == "Bed Pillow.001") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
     }
 }
 
@@ -604,6 +706,19 @@ void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &
         else if (drawable.transform->name == "Toilet Paper Roll")           type = CollisionType::Steal;
 
         objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Bathroom Sink Faucet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Bathtub Faucet") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&click);
+        }
+        if (drawable.transform->name == "Towel") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&pillow);
+        }
     }
 }
 
@@ -624,10 +739,28 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
 
         objects.push_back( RoomObject(drawable.transform, type) );
 
+        if (drawable.transform->name == "Desk Lamp") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&trophy);
+        }
+        if (drawable.transform->name == "Notebook") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&papers);
+        }
+        if (drawable.transform->name == "Laptop") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&typing); // can't hear this one?
+        }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
-            objects.back().has_sound = false;
+            // doesn't play sound when trophy hits the floor
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&trophy);
             objects.back().spin = true;
+        }
+        if (drawable.transform->name == "Books") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&books);
         }
     }
 }
@@ -780,8 +913,12 @@ PlayMode::PlayMode() :
         std::cout << "************** OI MATE WHERE'S THE SHADOW **************" << std::endl;
     }
 
+    // ------------- Setup text rendering ---------------
+    game_text.PLAYMODE = true;
+    game_text.init_state(script_path);
+    game_text.fill_state();
     // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 2.0f);
+    // bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -812,6 +949,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		} else if (evt.key.keysym.sym == SDLK_SPACE) {
             space.downs += 1;
             space.pressed = true;
+            return true;
+        } else if (evt.key.keysym.sym == SDLK_i) {  // Switches back to InstrucMode until the user escapes
+            Mode::set_current(instruct_mode);
             return true;
         }
 	} else if (evt.type == SDL_KEYUP) {
@@ -936,7 +1076,8 @@ Scene::Transform *PlayMode::collide() {
 
         for (auto obj : *current_objects) {
             if (obj.name == "Rug") continue; // Rug is kinda blocky
-
+            // printf("transform_front:.....\n");
+            // printf("transform_front: %f %f %f\n", player.transform_front->position.x, player.transform_front->position.y, player.transform_front->position.z);
             glm::vec3 player_tip = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
             glm::vec3 player_base = player_tip;
             player_tip.z += 1.0f;
@@ -993,30 +1134,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         if (!deleted) {
             std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
         }
-
-        // if (RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-        //     living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else {
-        //     std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
-        // }
-
-
-        // bool is_livingroom = false;
-        // if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-        //     if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //         std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
-        //     }
-        //     else is_livingroom = false;
-        // }
-        // else is_livingroom = true;
-
-        // // Then add drawable of the resulting mesh
-        // if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
     };
 
     auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
@@ -1038,20 +1155,39 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
+    bool found_object = false;
     std::vector<RoomObject>::iterator collision_obj_iter;
     for (auto room_type : current_rooms) {
         switch_rooms(room_type);
         collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
-        if (collision_obj_iter != (*current_objects).end()) break;
+        if (collision_obj_iter != (*current_objects).end()) {
+            found_object = true;
+            break;
+        }
     }
     RoomObject &collision_obj = *(collision_obj_iter);
 
-    if (!collision_obj.done) {
+    // parse out every including and past . in the name
+    size_t period_pos = 0;
+    //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
+    std::string parsed_name = "";
+    
+    if (found_object) {
+        parsed_name = collision_obj.transform->name;
+        if ((period_pos = collision_obj.transform->name.find(".")) != std::string::npos) {
+            parsed_name = collision_obj.transform->name.substr(0, period_pos);;
+        }
+    }
+
+    if (found_object && !collision_obj.done) {
         switch (collision_obj.collision_type) {
             case CollisionType::Steal: {
                 if (!player.swatting) break; // need to be swatting
                 score += 3;
+                display_collide = true;
+                collide_msg_time = 3.0f;
+                collide_label = "+3 " + parsed_name;
                 collision_obj.done = true;
                 player.swatting = false;
                 player.swatting_timer = 0.f;
@@ -1068,6 +1204,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             case CollisionType::Destroy: {
                 if (!player.swatting) break; // need to be swatting
                 score += 5;
+                display_collide = true;
+                collide_msg_time = 3.0f;
+                collide_label = "+5 " + parsed_name;
                 collision_obj.done = true;
                 player.swatting = false;
 
@@ -1081,10 +1220,17 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             }
             case CollisionType::KnockOver: {
                 score += 3;
+                display_collide = true;
+                collide_msg_time = 3.0f;
+                collide_label = "+3 " + parsed_name;
                 collision_obj.done = true;
 
                 switchout_mesh(collision_obj);
                 pseudo_remove_bbox(collision_obj);
+
+                if(collision_obj.has_sound) {
+                    Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                }
                 break;
             }
             case CollisionType::PushOff: {
@@ -1150,7 +1296,16 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     // printf("vertical_collide: %s\n", vertical_collision_name.c_str());
                     if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 1.0f) {
                         // fell alot
-                        score += 5;
+                        score += 7;
+                        // parse out every including and past . in the name
+                        size_t period_pos = 0;
+                        //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
+                        std::string parsed_name = obj.transform->name;
+                        if ((period_pos = obj.transform->name.find(".")) != std::string::npos) {
+                            parsed_name = obj.transform->name.substr(0, period_pos);;
+                        }
+                        collide_label = "+7 " + parsed_name;
+                        collide_msg_time = 3.0f;
                         obj.collided = true;  // prevents user from gaining more points
                         obj.done = true;
                         obj.transform->rotation = obj.orig_rotation;
@@ -1194,12 +1349,22 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 void PlayMode::update(float elapsed) {
     if (game_over) return;
 
-    game_timer -= elapsed;
-    if (game_timer <= 0.f) {
+    game_timer.seconds -= elapsed;
+    if (game_timer.seconds <= 0.f) {
         game_over = true;
-        game_timer = 0.f;
+        game_text.GAMEOVER = true;
+        game_timer.seconds = 0.f;
+        return;
     }
 
+    if (display_collide) {
+        collide_msg_time -= elapsed;
+        if (collide_msg_time <= 0.f) {
+            display_collide = false;
+            collide_msg_time = 0.f;
+        }
+    }
+    
     glm::vec3 prev_player_position = player.transform_middle->position;
     glm::quat prev_player_rotation = player.transform_middle->rotation;
 
@@ -1208,8 +1373,6 @@ void PlayMode::update(float elapsed) {
     constexpr float ground_speed = 8.0f;
     constexpr float air_speed = 5.0f;
     glm::vec2 move = glm::vec2(0.0f);
-    // if (left.pressed && !right.pressed) move.y = -1.0f;
-    // if (!left.pressed && right.pressed) move.y = 1.0f;
 
     bool moved = down.pressed || up.pressed || left.pressed || right.pressed;
 
@@ -1242,12 +1405,6 @@ void PlayMode::update(float elapsed) {
         }
         movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
         player.transform_middle->position += movement;
-        // player.tip = player.transform_middle->position;
-        // player.tip.z += 1.0f;
-        // player.base = player.transform_middle->position;
-        // player.base.z -= 1.0f;
-        // glm::vec3 movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
-        
         player.update_position(player.transform_middle->position);
         // shadow.update_position(player.base, &(living_room_floor->position.z));
     }
@@ -1453,6 +1610,49 @@ void PlayMode::update(float elapsed) {
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
+    // Draw scene meshes
+    {
+        //update camera aspect ratio for drawable:
+        player.camera->aspect = float(drawable_size.x) / float(drawable_size.y);
+
+        //set up light type and position for lit_color_texture_program:
+        // TODO: consider using the Light(s) in the scene to do this
+        glUseProgram(lit_color_texture_program->program);
+        glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
+        glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+        glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+        glUseProgram(0);
+
+        glUseProgram(blob_shadow_texture_program->program);
+        glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
+        glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+        glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+        glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
+        glUseProgram(0);
+
+        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
+
+        // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        cat_scene.draw(*player.camera);
+        living_room_scene.draw(*player.camera);
+        kitchen_scene.draw(*player.camera);
+    }
+
+    // Draw text
+    game_text.edit_state(game_text.SCORE, std::to_string(score));
+    game_text.edit_state(game_text.TIME, game_timer.to_string());
+
+    if (display_collide) game_text.edit_state(game_text.COLLISION, collide_label);
+    else                 game_text.edit_state(game_text.COLLISION, " ");
 	//update camera aspect ratio for drawable:
 	player.camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
@@ -1492,38 +1692,38 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     // living_room_scene.draw(*player.camera);
     // kitchen_scene.draw(*player.camera);
 
-    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-        glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+    //     glDisable(GL_DEPTH_TEST);
+    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        for (auto room_type : current_rooms) {
-            switch_rooms(room_type);
+    //     for (auto room_type : current_rooms) {
+    //         switch_rooms(room_type);
         
-            for (auto obj : (*current_objects)) {
-                if (obj.collision_type != CollisionType::PushOff) continue;
-                auto tip = obj.capsule.tip;
-                auto base = obj.capsule.base;
-                auto r = obj.capsule.radius;
+    //         for (auto obj : (*current_objects)) {
+    //             if (obj.collision_type != CollisionType::PushOff) continue;
+    //             auto tip = obj.capsule.tip;
+    //             auto base = obj.capsule.base;
+    //             auto r = obj.capsule.radius;
 
-                // tip
-                glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             // tip
+    //             glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-                // base
-                glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            }
-        }
+    //             // base
+    //             glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         }
+    //     }
 
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
@@ -1604,48 +1804,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
     //     }
 
-    }
+    // }
 
-	{ //use DrawLines to overlay some text:
+	{ //overlay some text:
         glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
-
-        float aspect = float(drawable_size.x) / float(drawable_size.y);
-
-        DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-		constexpr float H = 0.09f;
-        std::string message;
-        if (game_over) {
-            message = "Your Owner Came Back, GAME OVER!";
-        } else {
-            message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
-        }
-
-		lines.draw_text(message,
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text(message,
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-
-        constexpr float score_H = 0.12f;
-        lines.draw_text("Score: " + std::to_string(score),
-            glm::vec3(-aspect + 0.1f * score_H, -1.0 + 0.1f * score_H + 0.2f, 0.0),
-			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Score: " + std::to_string(score),
-			glm::vec3(-aspect + 0.1f * score_H + ofs, -1.0 + + 0.1f * score_H + ofs + 0.2f, 0.0),
-			glm::vec3(score_H, 0.0f, 0.0f), glm::vec3(0.0f, score_H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	}
-	GL_ERRORS();
+        game_text.update_state();
+        game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
+    }
 }

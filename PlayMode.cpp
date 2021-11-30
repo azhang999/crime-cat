@@ -586,6 +586,34 @@ void PlayMode::generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &o
                 objects.back().samples.push_back(&shattering);
                 objects.back().given_speed = 6.0f;
             }
+            if (drawable.transform->name == "Pan") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&clink);
+            }
+            if (drawable.transform->name == "Pan.001") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&clink);
+            }
+            if (drawable.transform->name == "Faucet") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.001") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.002") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
+            if (drawable.transform->name == "Stove Knob.003") {
+                objects.back().has_sound = true;
+                objects.back().samples.push_back(&click);
+            }
         }
 
         // ----- Search for FALLING objects to set start/end heights -----

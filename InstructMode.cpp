@@ -210,7 +210,7 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
 
         //bind the solid white texture to location zero so things will be drawn just with their colors:
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, white_tex);		// TODO: change to instruct_tex
+        glBindTexture(GL_TEXTURE_2D, instruct_tex);
 
         //run the OpenGL pipeline:
         glDrawArrays(GL_TRIANGLES, 0, GLsizei(vertices.size()));

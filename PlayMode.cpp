@@ -38,6 +38,14 @@ Load< MeshBuffer > kitchen_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+GLuint walls_doors_floors_stairs_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > walls_doors_floors_stairs_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating walls_doors_floors_stairs Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("walls_doors_floors_stairs.pnct"), data_path("walls_doors_floors_stairs.boundbox"));
+	walls_doors_floors_stairs_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
 // angle in radians between two 3d vectors
 float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
@@ -88,6 +96,22 @@ Load< Scene > kitchen_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = kitchen_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > walls_doors_floors_stairs_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("walls_doors_floors_stairs.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = walls_doors_floors_stairs_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = walls_doors_floors_stairs_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -350,58 +374,67 @@ void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
     }
 }
 
-void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
-
-    if (room_type == RoomType::LivingRoom) {
-        float rug_height = 0.0f;
-        float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
-
-        for (auto &drawable : scene.drawables) {
-            if (drawable.transform->name == "Player") continue;
-            if ((drawable.transform->name).find("Collide") != std::string::npos) {
-                continue;       // Save these in a second pass
-            }
-            
-            CollisionType type = CollisionType::None;  
-            if (drawable.transform->name == "Vase")             type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")         type = CollisionType::Steal;
-            else if (drawable.transform->name == "Mug")         type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Magazine")    type = CollisionType::KnockOver;
-
+void PlayMode::generate_wdfs_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name.find("Door") == std::string::npos && 
+            drawable.transform->name.find("Pass") == std::string::npos) {
+            CollisionType type = CollisionType::None;
             objects.push_back( RoomObject(drawable.transform, type) );
-
-            if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
-            if (drawable.transform->name == "SideTable") {
-                sidetable_x_min = drawable.transform->bbox[1].x;
-                sidetable_x_max = drawable.transform->bbox[5].x;
-                sidetable_y_min = drawable.transform->bbox[1].y;
-                sidetable_y_max = drawable.transform->bbox[2].y;
-            }
-            if (drawable.transform->name == "Floor") {
-                living_room_floor = drawable.transform;
-            }
-            if (drawable.transform->name == "Vase") {
-                objects.back().given_speed = 3.0f;
-                objects.back().has_sound = true;
-                objects.back().samples.push_back(&shattering);
-                objects.back().spin = true;
-            }
         }
 
-        // ----- Search for FALLING objects to set start/end heights -----
-        auto vase_iter = find_if(objects.begin(), objects.end(),
-                                [](const RoomObject &elem) { return elem.transform->name == "Vase"; });
-        RoomObject &vase_obj = *(vase_iter);
-        vase_obj.start_height = vase_obj.transform->position.z;
-        vase_obj.end_height   = rug_height;
-        vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
-        vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
+        if (drawable.transform->name == "First Floor") {
+            living_room_floor = drawable.transform;
+        }
+    }
+}
+
+void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    float rug_height = 0.0f;
+    float sidetable_x_min = 0, sidetable_x_max = 0, sidetable_y_min = 0, sidetable_y_max = 0;
+
+    for (auto &drawable : scene.drawables) {
+        if (drawable.transform->name == "Player") continue;
+        if ((drawable.transform->name).find("Collide") != std::string::npos) {
+            continue;       // Save these in a second pass
+        }
+        
+        CollisionType type = CollisionType::None;  
+        if (drawable.transform->name == "Vase")             type = CollisionType::PushOff;
+        else if (drawable.transform->name == "Key")         type = CollisionType::Steal;
+        else if (drawable.transform->name == "Mug")         type = CollisionType::KnockOver;
+        else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
+        else if (drawable.transform->name == "Magazine")    type = CollisionType::KnockOver;
+
+        objects.push_back( RoomObject(drawable.transform, type) );
+
+        if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
+        if (drawable.transform->name == "SideTable") {
+            sidetable_x_min = drawable.transform->bbox[1].x;
+            sidetable_x_max = drawable.transform->bbox[5].x;
+            sidetable_y_min = drawable.transform->bbox[1].y;
+            sidetable_y_max = drawable.transform->bbox[2].y;
+        }
+        if (drawable.transform->name == "Vase") {
+            objects.back().given_speed = 3.0f;
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&shattering);
+            objects.back().spin = true;
+        }
     }
 
-    else if (room_type == RoomType::Kitchen) {
-        float floor_height = 0.0f;
+    // ----- Search for FALLING objects to set start/end heights -----
+    auto vase_iter = find_if(objects.begin(), objects.end(),
+                            [](const RoomObject &elem) { return elem.transform->name == "Vase"; });
+    RoomObject &vase_obj = *(vase_iter);
+    vase_obj.start_height = vase_obj.transform->position.z;
+    vase_obj.end_height   = rug_height;
+    vase_obj.x_min = sidetable_x_min; vase_obj.x_max = sidetable_x_max;
+    vase_obj.y_min = sidetable_y_min; vase_obj.y_max = sidetable_y_max;
+}
+
+void PlayMode::generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &objects) {
+    float floor_height = 0.0f;
         float island_x_min = 0, island_x_max = 0, island_y_min = 0, island_y_max = 0;
 
         for (auto &drawable : scene.drawables) {
@@ -466,6 +499,26 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
         plate2.end_height   = floor_height;
         plate2.x_min = island_x_min; plate2.x_max = island_x_max;
         plate2.y_min = island_y_min; plate2.y_max = island_y_max;
+}
+
+void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
+    switch (room_type) {
+        case RoomType::LivingRoom: {
+            generate_living_room_objects(scene, objects);
+            break;
+        }
+        case RoomType::Kitchen: {
+            generate_kitchen_objects(scene, objects);
+            break;
+        }
+        case RoomType::WallsDoorsFloorsStairs: {
+            generate_wdfs_objects(scene, objects);
+            break;
+        }
+        default: {
+            printf("ERROR Room Type: %d not implemented yet\n", room_type);
+            exit(1);
+        }
     }
 
     // Applies for all rooms
@@ -486,20 +539,35 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
 }
 
 void PlayMode::switch_rooms(RoomType room_type) {
-    if (room_type == RoomType::LivingRoom) {
-        current_room = RoomType::LivingRoom;
-        current_scene   = &living_room_scene;
-        current_objects = &living_room_objects;
-    }
-    else if (room_type == RoomType::Kitchen) {
-        current_room = RoomType::Kitchen;
-        current_scene   = &kitchen_scene;
-        current_objects = &kitchen_objects;
+    switch (room_type) {
+        case RoomType::LivingRoom: {
+            current_scene   = &living_room_scene;
+            current_objects = &living_room_objects;
+            break;
+        }
+        case RoomType::Kitchen: {
+            current_scene   = &kitchen_scene;
+            current_objects = &kitchen_objects;
+            break;
+        }
+        case RoomType::WallsDoorsFloorsStairs: {
+            current_scene   = &wdfs_scene;
+            current_objects = &wdfs_objects;
+            break;
+        }
+        default: {
+            printf("ERROR (switch_room) Room Type: %d not implemented yet\n", room_type);
+            exit(1);
+            break;
+        }
     }
 }
 
 PlayMode::PlayMode() : 
-    cat_scene(*cat_scene_load), living_room_scene(*living_room_scene_load), kitchen_scene(*kitchen_scene_load) {
+    cat_scene(*cat_scene_load), 
+    living_room_scene(*living_room_scene_load), 
+    kitchen_scene(*kitchen_scene_load),
+    wdfs_scene(*walls_doors_floors_stairs_scene_load) {
     
     GenerateBBox(cat_scene, cat_meshes);
 
@@ -526,6 +594,7 @@ PlayMode::PlayMode() :
 
     GenerateBBox(living_room_scene, living_room_meshes);
     GenerateBBox(kitchen_scene, kitchen_meshes);
+    GenerateBBox(wdfs_scene, walls_doors_floors_stairs_meshes);
 
     // ##################################################################
     //          Premature optimization is the root of all evil :)
@@ -533,6 +602,7 @@ PlayMode::PlayMode() :
 
     generate_room_objects(living_room_scene, living_room_objects, RoomType::LivingRoom);
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
+    generate_room_objects(wdfs_scene, wdfs_objects, RoomType::WallsDoorsFloorsStairs);
 
     // ----- Start in living room -----
     switch_rooms(RoomType::LivingRoom);
@@ -645,12 +715,8 @@ SurfaceType get_top_surface_type(Scene::Transform *transform) {
 }
 
 std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_normal, float *pen_depth) {
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
         for (auto obj : *current_objects) {
             if (obj.name == "Rug") continue; // Rug is kinda blocky      
             if (obj.name == current_obj.name) continue;
@@ -705,12 +771,8 @@ Scene::Transform *PlayMode::collide() {
     glm::vec3 best_pen_normal = glm::vec3(0.f);
     float best_pen_depth = 0.f;
 
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
 
         for (auto obj : *current_objects) {
             if (obj.name == "Rug") continue; // Rug is kinda blocky
@@ -791,13 +853,12 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
-    switch_rooms(RoomType::LivingRoom);
-    auto collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
-                                        [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
-    if (collision_obj_iter == (*current_objects).end()) {
-        switch_rooms(RoomType::Kitchen);
+    std::vector<RoomObject>::iterator collision_obj_iter;
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
         collision_obj_iter = find_if((*current_objects).begin(), (*current_objects).end(),
                                         [object_collide_name](const RoomObject &elem) { return elem.name == object_collide_name; });
+        if (collision_obj_iter != (*current_objects).end()) break;
     }
     RoomObject &collision_obj = *(collision_obj_iter);
 
@@ -859,12 +920,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
     // ##################### Resolve remaining collision behavior #####################
     // simulate object motion
-     for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            switch_rooms(RoomType::LivingRoom);
-        } else {
-            switch_rooms(RoomType::Kitchen);
-        }
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+
         for (auto &obj : *current_objects) {
             if (obj.collision_type == CollisionType::PushOff && !obj.done) {
                 if (isnan(obj.transform->position.x)) {
@@ -1170,19 +1228,28 @@ void PlayMode::update(float elapsed) {
 
         float radius = camera_radius;
         // loop  through all drawables in each scene
-        for (auto &drawable : living_room_scene.drawables) {
-            // if (bbox_distance(drawable.transform->bbox) < radius) {
-            //     std::cout << drawable.transform->name << std::endl;
-            // }
-            // manually skip some items with weird bbox's
-            if (drawable.transform->name == "Magazine Collided"
-            ||  drawable.transform->name == "Mug Collided")
-                continue;
-            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        for (auto room_type : current_rooms) {
+            switch_rooms(room_type);
+            for (auto &drawable : current_scene->drawables) {
+                 if (drawable.transform->name == "Magazine Collided"
+                ||  drawable.transform->name == "Mug Collided")
+                    continue;
+                radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+            }
         }
-        for (auto &drawable : kitchen_scene.drawables) {
-            radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
-        }
+        // for (auto &drawable : living_room_scene.drawables) {
+        //     // if (bbox_distance(drawable.transform->bbox) < radius) {
+        //     //     std::cout << drawable.transform->name << std::endl;
+        //     // }
+        //     // manually skip some items with weird bbox's
+        //     if (drawable.transform->name == "Magazine Collided"
+        //     ||  drawable.transform->name == "Mug Collided")
+        //         continue;
+        //     radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        // }
+        // for (auto &drawable : kitchen_scene.drawables) {
+        //     radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
+        // }
 
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
         glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -1232,6 +1299,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
+    wdfs_scene.draw(*player.camera);
     living_room_scene.draw(*player.camera);
     kitchen_scene.draw(*player.camera);
 

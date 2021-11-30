@@ -26,6 +26,9 @@ all : \
 	$(DIST)/kitchen.pnct \
 	$(DIST)/kitchen.scene \
 	$(DIST)/kitchen.boundbox \
+	$(DIST)/walls_doors_floors_stairs.pnct \
+	$(DIST)/walls_doors_floors_stairs.scene \
+	$(DIST)/walls_doors_floors_stairs.boundbox \
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
@@ -53,3 +56,12 @@ $(DIST)/kitchen.pnct : kitchen.blend $(EXPORT_MESHES)
 
 $(DIST)/kitchen.boundbox : kitchen.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Kitchen '$@'
+
+$(DIST)/walls_doors_floors_stairs.scene : all_rooms.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/walls_doors_floors_stairs.pnct : all_rooms.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/walls_doors_floors_stairs.boundbox : all_rooms.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':WallsDoorsFloorsStairs '$@'

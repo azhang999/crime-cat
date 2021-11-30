@@ -316,31 +316,16 @@ float PlayMode::get_surface_below_height(float &closest_dist) {
     float height = player.base.z;
     closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
 
-    switch_rooms(RoomType::LivingRoom);
-    for (auto obj : *current_objects) {
-        glm::vec3 intersect_pt;
-        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
-            // if (intersect_pt.z < height) {
-            //     height = intersect_pt.z;
-            // }
-            float dist;
-            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
-                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
-                closest_dist = dist;
-                height = intersect_pt.z;
-            }
-        }
-    }
-
-    switch_rooms(RoomType::Kitchen);
-    for (auto obj : *current_objects) {
-        glm::vec3 intersect_pt;
-        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
-            float dist;
-            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
-                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
-                closest_dist = dist;
-                height = intersect_pt.z;
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+        for (auto obj : *current_objects) {
+            glm::vec3 intersect_pt;
+            if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
+                float dist;
+                if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
+                    closest_dist = dist;
+                    height = intersect_pt.z;
+                }
             }
         }
     }

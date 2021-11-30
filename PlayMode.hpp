@@ -43,6 +43,7 @@ struct PlayMode : Mode {
     void generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &objects);
     void generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &objects);
     void generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &objects);
+    void generate_office_objects(Scene &scene, std::vector<RoomObject> &objects);
     void generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type);
 	void switch_rooms(RoomType room_type);
 	float get_surface_below_height(float &closest_dist);
@@ -74,12 +75,14 @@ struct PlayMode : Mode {
     Scene wdfs_scene;
     Scene bedroom_scene;
     Scene bathroom_scene;
+    Scene office_scene;
 
 	std::vector<RoomObject> living_room_objects;
 	std::vector<RoomObject> kitchen_objects;
     std::vector<RoomObject> wdfs_objects;
     std::vector<RoomObject> bedroom_objects;
     std::vector<RoomObject> bathroom_objects;
+    std::vector<RoomObject> office_objects;
 
     // hardcode all rooms in for now
     std::vector<RoomType> current_rooms = {
@@ -87,7 +90,8 @@ struct PlayMode : Mode {
         LivingRoom, 
         Kitchen, 
         Bedroom, 
-        Bathroom
+        Bathroom,
+        Office
     };
 
 	// save floors of all rooms specially for collisions to avoid lookups

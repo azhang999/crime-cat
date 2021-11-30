@@ -35,6 +35,9 @@ all : \
 	$(DIST)/bathroom.pnct \
 	$(DIST)/bathroom.scene \
 	$(DIST)/bathroom.boundbox \
+	$(DIST)/office.pnct \
+	$(DIST)/office.scene \
+	$(DIST)/office.boundbox \
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
@@ -89,3 +92,12 @@ $(DIST)/bathroom.pnct : bathroom.blend $(EXPORT_MESHES)
 
 $(DIST)/bathroom.boundbox : bathroom.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bathroom '$@'
+
+$(DIST)/office.scene : office.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Office '$@'
+
+$(DIST)/office.pnct : office.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Office '$@'
+
+$(DIST)/office.boundbox : office.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Office '$@'

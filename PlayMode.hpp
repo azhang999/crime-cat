@@ -87,11 +87,11 @@ struct PlayMode : Mode {
     // hardcode all rooms in for now
     std::vector<RoomType> current_rooms = {
         WallsDoorsFloorsStairs, 
-        LivingRoom, 
         Kitchen, 
         Bedroom, 
         Bathroom,
-        Office
+        Office,
+		LivingRoom		// hardcoded last so cat shadow can render last!
     };
 
 	// save floors of all rooms specially for collisions to avoid lookups

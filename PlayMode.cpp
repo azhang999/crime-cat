@@ -1006,30 +1006,6 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         if (!deleted) {
             std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
         }
-
-        // if (RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-        //     living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else if (RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //     kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // } else {
-        //     std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
-        // }
-
-
-        // bool is_livingroom = false;
-        // if (!RemoveFrameByName(living_room_scene, resolved_obj.name)) {     // cannot find in living room
-        //     if (!RemoveFrameByName(kitchen_scene, resolved_obj.name)) {     // cannot find in kitchen
-        //         std::cerr << "ERROR: Cannot locate current object drawable: " << resolved_obj.name << std::endl;
-        //     }
-        //     else is_livingroom = false;
-        // }
-        // else is_livingroom = true;
-
-        // // Then add drawable of the resulting mesh
-        // if (is_livingroom)  living_room_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
-        // else                kitchen_scene.drawables.push_back(resolved_obj.reaction_drawables[0]);
     };
 
     auto pseudo_remove_bbox = [&](RoomObject &removed_obj) {
@@ -1189,7 +1165,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 1.0f) {
                         // fell alot
                         score += 7;
-                         // parse out every including and past . in the name
+                        // parse out every including and past . in the name
                         size_t period_pos = 0;
                         //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
                         std::string parsed_name = obj.transform->name;
@@ -1265,8 +1241,6 @@ void PlayMode::update(float elapsed) {
     constexpr float ground_speed = 8.0f;
     constexpr float air_speed = 5.0f;
     glm::vec2 move = glm::vec2(0.0f);
-    // if (left.pressed && !right.pressed) move.y = -1.0f;
-    // if (!left.pressed && right.pressed) move.y = 1.0f;
 
     bool moved = down.pressed || up.pressed || left.pressed || right.pressed;
 
@@ -1299,12 +1273,6 @@ void PlayMode::update(float elapsed) {
         }
         movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
         player.transform_middle->position += movement;
-        // player.tip = player.transform_middle->position;
-        // player.tip.z += 1.0f;
-        // player.base = player.transform_middle->position;
-        // player.base.z -= 1.0f;
-        // glm::vec3 movement = player.transform->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform->position;
-        
         player.update_position(player.transform_middle->position);
         // shadow.update_position(player.base, &(living_room_floor->position.z));
     }
@@ -1592,38 +1560,38 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     // living_room_scene.draw(*player.camera);
     // kitchen_scene.draw(*player.camera);
 
-    { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-        glDisable(GL_DEPTH_TEST);
-        DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
+    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
+    //     glDisable(GL_DEPTH_TEST);
+    //     DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
 
-        for (auto room_type : current_rooms) {
-            switch_rooms(room_type);
+    //     for (auto room_type : current_rooms) {
+    //         switch_rooms(room_type);
         
-            for (auto obj : (*current_objects)) {
-                if (obj.collision_type != CollisionType::PushOff) continue;
-                auto tip = obj.capsule.tip;
-                auto base = obj.capsule.base;
-                auto r = obj.capsule.radius;
+    //         for (auto obj : (*current_objects)) {
+    //             if (obj.collision_type != CollisionType::PushOff) continue;
+    //             auto tip = obj.capsule.tip;
+    //             auto base = obj.capsule.base;
+    //             auto r = obj.capsule.radius;
 
-                // tip
-                glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             // tip
+    //             glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
 
-                // base
-                glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-                draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-            }
-        }
+    //             // base
+    //             glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //             draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
+    //         }
+    //     }
 
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
@@ -1704,29 +1672,10 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
     //     }
 
-    }
+    // }
 
-	{ //use DrawLines to overlay some text:
+	{ //overlay some text:
         glDisable(GL_DEPTH_TEST);
-        // DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
-
-        // float aspect = float(drawable_size.x) / float(drawable_size.y);
-
-        // DrawLines lines(glm::mat4(
-		// 	1.0f / aspect, 0.0f, 0.0f, 0.0f,
-		// 	0.0f, 1.0f, 0.0f, 0.0f,
-		// 	0.0f, 0.0f, 1.0f, 0.0f,
-		// 	0.0f, 0.0f, 0.0f, 1.0f
-		// ));
-		// constexpr float H = 0.09f;
-        // std::string message;
-        // if (game_over) {
-        //     message = "Your Owner Came Back, GAME OVER!";
-        // } else {
-        //     message = "Time Remaining: " + std::to_string(game_timer/ 60.f) + " Minutes";
-        // }
-
-
         game_text.update_state();
         game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
     }

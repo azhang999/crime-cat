@@ -509,6 +509,23 @@ void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject
             objects.back().samples.push_back(&shattering);
             objects.back().spin = true;
         }
+
+        if (drawable.transform->name == "Pillow") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&tearing);
+        }
+        if (drawable.transform->name == "Pillow.001") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&tearing);
+        }
+        if (drawable.transform->name == "Mug") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&clink);
+        }
+        if (drawable.transform->name == "Magazine") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&papers);
+        }
     }
 
     // ----- Search for FALLING objects to set start/end heights -----
@@ -1110,6 +1127,10 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
                 switchout_mesh(collision_obj);
                 pseudo_remove_bbox(collision_obj);
+
+                if(collision_obj.has_sound) {
+                    Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                }
                 break;
             }
             case CollisionType::PushOff: {

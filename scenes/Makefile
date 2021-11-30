@@ -29,6 +29,9 @@ all : \
 	$(DIST)/walls_doors_floors_stairs.pnct \
 	$(DIST)/walls_doors_floors_stairs.scene \
 	$(DIST)/walls_doors_floors_stairs.boundbox \
+	$(DIST)/bedroom.pnct \
+	$(DIST)/bedroom.scene \
+	$(DIST)/bedroom.boundbox \
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
@@ -65,3 +68,12 @@ $(DIST)/walls_doors_floors_stairs.pnct : all_rooms.blend $(EXPORT_MESHES)
 
 $(DIST)/walls_doors_floors_stairs.boundbox : all_rooms.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/bedroom.scene : bedroom.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Bedroom '$@'
+
+$(DIST)/bedroom.pnct : bedroom.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Bedroom '$@'
+
+$(DIST)/bedroom.boundbox : bedroom.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bedroom '$@'

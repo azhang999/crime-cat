@@ -33,3 +33,7 @@ bool capsule_bbox_collision(glm::vec3 tip, glm::vec3 base, float radius, glm::ve
 
 bool capsule_capsule_collision(float a_radius, glm::vec3 a_tip, glm::vec3 a_base, 
                                float b_radius, glm::vec3 b_tip, glm::vec3 b_base);
+
+extern glm::vec3 center_;
+extern glm::vec3 tri_point_;
+extern bool is_side_;

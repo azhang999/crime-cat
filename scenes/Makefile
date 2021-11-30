@@ -26,6 +26,18 @@ all : \
 	$(DIST)/kitchen.pnct \
 	$(DIST)/kitchen.scene \
 	$(DIST)/kitchen.boundbox \
+	$(DIST)/walls_doors_floors_stairs.pnct \
+	$(DIST)/walls_doors_floors_stairs.scene \
+	$(DIST)/walls_doors_floors_stairs.boundbox \
+	$(DIST)/bedroom.pnct \
+	$(DIST)/bedroom.scene \
+	$(DIST)/bedroom.boundbox \
+	$(DIST)/bathroom.pnct \
+	$(DIST)/bathroom.scene \
+	$(DIST)/bathroom.boundbox \
+	$(DIST)/office.pnct \
+	$(DIST)/office.scene \
+	$(DIST)/office.boundbox \
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'
@@ -53,3 +65,39 @@ $(DIST)/kitchen.pnct : kitchen.blend $(EXPORT_MESHES)
 
 $(DIST)/kitchen.boundbox : kitchen.blend $(EXPORT_BOUNDBOX)
 	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Kitchen '$@'
+
+$(DIST)/walls_doors_floors_stairs.scene : all_rooms.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/walls_doors_floors_stairs.pnct : all_rooms.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/walls_doors_floors_stairs.boundbox : all_rooms.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':WallsDoorsFloorsStairs '$@'
+
+$(DIST)/bedroom.scene : bedroom.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Bedroom '$@'
+
+$(DIST)/bedroom.pnct : bedroom.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Bedroom '$@'
+
+$(DIST)/bedroom.boundbox : bedroom.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bedroom '$@'
+
+$(DIST)/bathroom.scene : bathroom.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Bathroom '$@'
+
+$(DIST)/bathroom.pnct : bathroom.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Bathroom '$@'
+
+$(DIST)/bathroom.boundbox : bathroom.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Bathroom '$@'
+
+$(DIST)/office.scene : office.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Office '$@'
+
+$(DIST)/office.pnct : office.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Office '$@'
+
+$(DIST)/office.boundbox : office.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Office '$@'

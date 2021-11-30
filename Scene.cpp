@@ -88,19 +88,16 @@ void Scene::draw(Camera const &camera) const {
 }
 
 void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light) const {
-
-	//Iterate through all drawables, sending each one to OpenGL:
-	for (auto const &drawable : drawables) {
+	auto send_gl_draw = [&](auto const &drawable) {
 		//Reference to drawable's pipeline for convenience:
 		Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
 
 		//skip any drawables without a shader program set:
-		if (pipeline.program == 0) continue;
+		if (pipeline.program == 0) return;
 		//skip any drawables that don't reference any vertex array:
-		if (pipeline.vao == 0) continue;
+		if (pipeline.vao == 0) return;
 		//skip any drawables that don't contain any vertices:
-		if (pipeline.count == 0) continue;
-
+		if (pipeline.count == 0) return;
 
 		//Set shader program:
 		glUseProgram(pipeline.program);
@@ -156,7 +153,21 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
 			}
 		}
 		glActiveTexture(GL_TEXTURE0);
+	};
 
+	//Iterate through all drawables, sending each one to OpenGL:
+	
+	// FIRST PASS: non-transparent meshes
+	for (auto const &drawable : drawables) {
+		if (drawable.last_pass) {
+			continue;
+		}
+		send_gl_draw(drawable);
+	}
+
+	// SECOND PASS: draw transparent meshes
+	for (auto const &drawable : drawables) {
+		if (drawable.last_pass) send_gl_draw(drawable);
 	}
 
 	glUseProgram(0);

@@ -83,6 +83,14 @@ Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = cat_meshes_for_lit_color_texture_program;
+        // if (transform->name == "CatShadow") {                                // TODO: This breaks! I don't know why! Better just to keep the shadow in the living room.
+        //     drawable.pipeline = blob_shadow_texture_program_pipeline;
+        //     drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+        // }
+        // else {
+        //     drawable.pipeline = lit_color_texture_program_pipeline;
+        //     drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
+        // }
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -100,6 +108,7 @@ Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
         if (transform->name == "CatShadow") {
             drawable.pipeline = blob_shadow_texture_program_pipeline;
             drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+            drawable.last_pass = true;
         }
         else {
             drawable.pipeline = lit_color_texture_program_pipeline;
@@ -766,10 +775,6 @@ PlayMode::PlayMode() :
     GenerateBBox(bathroom_scene, bathroom_meshes);
     GenerateBBox(office_scene, office_meshes);
 
-    // ##################################################################
-    //          Premature optimization is the root of all evil :)
-    // ###############################################################
-
     generate_room_objects(living_room_scene, living_room_objects, RoomType::LivingRoom);
     generate_room_objects(kitchen_scene, kitchen_objects, RoomType::Kitchen);
     generate_room_objects(wdfs_scene, wdfs_objects, RoomType::WallsDoorsFloorsStairs);
@@ -786,11 +791,12 @@ PlayMode::PlayMode() :
     if (shadow_iter != living_room_scene.drawables.end()) {
         shadow.drawable = &(*shadow_iter);
         shadow.drawable->transform->position = living_room_floor->position;
+    } else {
+        std::cout << "************** OI MATE WHERE'S THE SHADOW **************" << std::endl;
     }
-    // AddFrame(cat_scene, *(shadow.drawable));
 
     // ------------- Start background music! ---------------
-    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
+    bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 2.0f);
 }
 
 PlayMode::~PlayMode() {

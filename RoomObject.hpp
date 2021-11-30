@@ -20,7 +20,7 @@ class RoomObject {
 		RoomObject() {};		// empty for when we just want to save a reference
 
 		RoomObject(Scene::Transform *transform_, CollisionType collision_type_) : 
-					transform(transform_), collision_type(collision_type_) {
+					transform(transform_), collision_type(collision_type_){
 			this->name = this->transform->name;
 			
             this->capsule.radius = std::max(std::abs(this->transform->bbox[5].x - this->transform->bbox[1].x), 
@@ -40,6 +40,7 @@ class RoomObject {
 
 		// ----- Transform properties -----
 		std::string name;
+		// std::string label;
 		Scene::Transform *transform = nullptr;
 		glm::vec3 orig_bbox[8];
         glm::vec3 orig_pos;

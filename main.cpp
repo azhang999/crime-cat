@@ -1,8 +1,11 @@
 //Mode.hpp declares the "Mode::current" static member variable, which is used to decide where event-handling, updating, and drawing events go:
 #include "Mode.hpp"
+#include <functional>
 
-//The 'PlayMode' mode plays the game:
-#include "PlayMode.hpp"
+#include "GP21IntroMode.hpp" // The "GP21 IntroMode" mode is the class loading screen for the game
+#include "SplashMode.hpp"	 // The "SplashMode" mode is our game's loading screen
+#include "InstructMode.hpp"	 // The "InstructMode" mode is our game's instruction screen
+#include "PlayMode.hpp"	 	 // The "PlayMode" mode is our game's gameplay mode
 
 //For asset loading:
 #include "Load.hpp"
@@ -68,7 +71,7 @@ int main(int argc, char **argv) {
 	SDL_Window *window = SDL_CreateWindow(
 		"Crime Cat", //TODO: remember to set a title for your game!
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		960, 800, //TODO: modify window size if you'd like
+		1200, 900, //TODO: modify window size if you'd like
 		SDL_WINDOW_OPENGL
 		| SDL_WINDOW_RESIZABLE //uncomment to allow resizing
 		| SDL_WINDOW_ALLOW_HIGHDPI //uncomment for full resolution on high-DPI screens
@@ -112,7 +115,16 @@ int main(int argc, char **argv) {
 	call_load_functions();
 
 	//------------ create game mode + make current --------------
-	Mode::set_current(std::make_shared< PlayMode >());
+	std::function< void() > init_gamemode = [&]() {
+		auto playmode_ptr = std::make_shared< PlayMode >();
+		auto instruct_ptr = std::make_shared< InstructMode >(playmode_ptr);
+		playmode_ptr.get()->instruct_mode = instruct_ptr;	// can reference instruction mode during gameplay
+
+		auto next_mode = std::make_shared< SplashMode >(instruct_ptr);
+		Mode::set_current(next_mode);
+	};
+	
+	Mode::set_current(std::make_shared< GP21IntroMode >(init_gamemode));
 
 	//------------ main loop ------------
 

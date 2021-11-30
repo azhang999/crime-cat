@@ -92,11 +92,11 @@ struct PlayMode : Mode {
     // hardcode all rooms in for now
     std::vector<RoomType> current_rooms = {
         WallsDoorsFloorsStairs, 
-        LivingRoom, 
         Kitchen, 
         Bedroom, 
         Bathroom,
-        Office
+        Office,
+		LivingRoom		// hardcoded last so cat shadow can render last!
     };
 
 	// save floors of all rooms specially for collisions to avoid lookups
@@ -185,7 +185,7 @@ struct PlayMode : Mode {
 	float camera_radius = 10.0f;
 
 	struct GameTimer {
-		float seconds = 1.0f * 60.f;		// TODO change back to 8min
+		float seconds = 5.0 * 60.f;		// TODO change back to 8min
 		std::string to_string() {
 			int sec = static_cast<int>(std::round(seconds));
 			int minutes = sec / 60;

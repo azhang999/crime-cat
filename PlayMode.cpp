@@ -83,6 +83,14 @@ Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = cat_meshes_for_lit_color_texture_program;
+        // if (transform->name == "CatShadow") {                                // TODO: This breaks! I don't know why! Better just to keep the shadow in the living room.
+        //     drawable.pipeline = blob_shadow_texture_program_pipeline;
+        //     drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+        // }
+        // else {
+        //     drawable.pipeline = lit_color_texture_program_pipeline;
+        //     drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
+        // }
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -100,6 +108,7 @@ Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
         if (transform->name == "CatShadow") {
             drawable.pipeline = blob_shadow_texture_program_pipeline;
             drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+            drawable.last_pass = true;
         }
         else {
             drawable.pipeline = lit_color_texture_program_pipeline;
@@ -343,31 +352,16 @@ float PlayMode::get_surface_below_height(float &closest_dist) {
     float height = player.base.z;
     closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
 
-    switch_rooms(RoomType::LivingRoom);
-    for (auto obj : *current_objects) {
-        glm::vec3 intersect_pt;
-        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
-            // if (intersect_pt.z < height) {
-            //     height = intersect_pt.z;
-            // }
-            float dist;
-            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
-                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
-                closest_dist = dist;
-                height = intersect_pt.z;
-            }
-        }
-    }
-
-    switch_rooms(RoomType::Kitchen);
-    for (auto obj : *current_objects) {
-        glm::vec3 intersect_pt;
-        if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
-            float dist;
-            if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
-                // std::cout << "*** " << obj.transform->name << ", dist = " << dist << ", closest = " << closest_dist << std::endl;
-                closest_dist = dist;
-                height = intersect_pt.z;
+    for (auto room_type : current_rooms) {
+        switch_rooms(room_type);
+        for (auto obj : *current_objects) {
+            glm::vec3 intersect_pt;
+            if (shadow_intersect(obj.transform, player.base, intersect_pt)) {
+                float dist;
+                if ((dist = glm::length(intersect_pt - player.base)) < closest_dist) {
+                    closest_dist = dist;
+                    height = intersect_pt.z;
+                }
             }
         }
     }
@@ -915,8 +909,9 @@ PlayMode::PlayMode() :
     if (shadow_iter != living_room_scene.drawables.end()) {
         shadow.drawable = &(*shadow_iter);
         shadow.drawable->transform->position = living_room_floor->position;
+    } else {
+        std::cout << "************** OI MATE WHERE'S THE SHADOW **************" << std::endl;
     }
-    // AddFrame(cat_scene, *(shadow.drawable));
 
     // ------------- Setup text rendering ---------------
     game_text.PLAYMODE = true;

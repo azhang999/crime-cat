@@ -1052,7 +1052,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         }
     }
 
-    if (!collision_obj.done) {
+    if (found_object && !collision_obj.done) {
         switch (collision_obj.collision_type) {
             case CollisionType::Steal: {
                 if (!player.swatting) break; // need to be swatting

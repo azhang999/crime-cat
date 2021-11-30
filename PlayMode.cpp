@@ -351,6 +351,7 @@ void PlayMode::Animation::animate(Scene &scene, bool enable, float elapsed) {
     }
 }
 
+
 void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &objects, RoomType room_type) {
 
     if (room_type == RoomType::LivingRoom) {
@@ -363,15 +364,34 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
                 continue;       // Save these in a second pass
             }
             
-            CollisionType type = CollisionType::None;  
-            if (drawable.transform->name == "Vase")      type = CollisionType::PushOff;
-            else if (drawable.transform->name == "Key")  type = CollisionType::Steal;
-            else if (drawable.transform->name == "Mug")  type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Pillow")      type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Pillow.001")  type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Magazine")        type = CollisionType::KnockOver;
+            CollisionType type = CollisionType::None;
+            std::string label = "";
+            if (drawable.transform->name == "Vase") {
+                type = CollisionType::PushOff;
+                label = "Vase";
+            }
+            else if (drawable.transform->name == "Key") {
+                type = CollisionType::Steal;
+                label = "Key";
+            }
+            else if (drawable.transform->name == "Mug") {
+                type = CollisionType::KnockOver;
+                label = "Mug";
+            }
+            else if (drawable.transform->name == "Pillow") {
+                type = CollisionType::Destroy;
+                label = "Pillow";
+            }
+            else if (drawable.transform->name == "Pillow.001") {
+                type = CollisionType::Destroy;
+                label = "Pillow";
+            }
+            else if (drawable.transform->name == "Magazine") {
+                type = CollisionType::KnockOver;
+                label = "Magazine";
+            }
 
-            objects.push_back( RoomObject(drawable.transform, type) );
+            objects.push_back( RoomObject(drawable.transform, type, label) );
 
             if (drawable.transform->name == "Rug") rug_height = objects.back().capsule.tip.z;
             if (drawable.transform->name == "SideTable") {
@@ -410,19 +430,53 @@ void PlayMode::generate_room_objects(Scene &scene, std::vector<RoomObject> &obje
             }
             
             CollisionType type = CollisionType::None;
-            if (drawable.transform->name == "Stove Knob") type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Stove Knob.001") type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Stove Knob.002") type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Stove Knob.003") type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Faucet") type = CollisionType::Destroy;
-            else if (drawable.transform->name == "Plate") type = CollisionType::Destroy;              // TODO: eventually push-offable
-            else if (drawable.transform->name == "Plate.001") type = CollisionType::Destroy;          // TODO: eventually push-offable
-            else if (drawable.transform->name == "Spoon") type = CollisionType::Steal;
-            else if (drawable.transform->name == "Spoon.001") type = CollisionType::Steal;
-            else if (drawable.transform->name == "Pan") type = CollisionType::KnockOver;
-            else if (drawable.transform->name == "Pan.001") type = CollisionType::KnockOver;
+            std::string label = "";
+            if (drawable.transform->name == "Stove Knob") {
+                type = CollisionType::KnockOver;
+                label = "Stove Knob";
+            }
+            else if (drawable.transform->name == "Stove Knob.001") {
+                type = CollisionType::KnockOver;
+                label = "Stove Knob";
+            }
+            else if (drawable.transform->name == "Stove Knob.002") {
+                type = CollisionType::KnockOver;
+                label = "Stove Knob";
+            }
+            else if (drawable.transform->name == "Stove Knob.003") {
+                type = CollisionType::KnockOver;
+                label = "Stove Knob";
+            }
+            else if (drawable.transform->name == "Faucet") {
+                type = CollisionType::Destroy;
+                label = "Faucet";
+            }
+            else if (drawable.transform->name == "Plate") {
+                type = CollisionType::PushOff;
+                label = "Plate";
+            }
+            else if (drawable.transform->name == "Plate.001") {
+                type = CollisionType::PushOff;
+                label = "Plate";
+            }
+            else if (drawable.transform->name == "Spoon") {
+                type = CollisionType::Steal;
+                label = "Spoon";
+            }
+            else if (drawable.transform->name == "Spoon.001") {
+                type = CollisionType::Steal;
+                label = "Spoon";
+            }
+            else if (drawable.transform->name == "Pan") {
+                type = CollisionType::KnockOver;
+                label = "Pan";
+            }
+            else if (drawable.transform->name == "Pan.001") {
+                type = CollisionType::KnockOver;
+                label = "Pan";
+            }
 
-            objects.push_back( RoomObject(drawable.transform, type) );
+            objects.push_back( RoomObject(drawable.transform, type, label) );
 
             if (drawable.transform->name == "Floor.001") {
                 floor_height = objects.back().capsule.tip.z;
@@ -734,6 +788,15 @@ void PlayMode::update(float elapsed) {
         return;
     }
 
+    if (display_collide) {
+        collide_msg_time -= elapsed;
+        if (collide_msg_time <= 0.f) {
+            display_collide = false;
+            collide_msg_time = 0.f;
+        }
+    }
+    
+
     glm::vec3 prev_player_position = player.transform->position;
 
 	//move player:
@@ -855,6 +918,10 @@ void PlayMode::update(float elapsed) {
         // if (col_drawable_iter != (*current_scene).drawables.end())
         //     (*current_scene).drawables.erase(col_drawable_iter);
         // (*current_objects).erase(obj_iter);
+
+        display_collide = true;
+        collide_label = "+" + std::to_string(3) + " " + collision_obj.label;
+        collide_msg_time = MAX_COL_TIME;
     }
     // --------- Destroy object ---------
     else if (player.swatting && collision_obj.collision_type == CollisionType::Destroy && !collision_obj.done) {
@@ -868,6 +935,10 @@ void PlayMode::update(float elapsed) {
         if(collision_obj.has_sound) {
             Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
         }
+
+        display_collide = true;
+        collide_label = "+" + std::to_string(5) + " " + collision_obj.label;
+        collide_msg_time = MAX_COL_TIME;
     }
     // --------- Knock over object ---------
     else if (collision_obj.collision_type == CollisionType::KnockOver && !collision_obj.done) {
@@ -876,6 +947,10 @@ void PlayMode::update(float elapsed) {
 
         switchout_mesh(collision_obj);
         pseudo_remove_bbox(collision_obj);
+
+        display_collide = true;
+        collide_label = "+" + std::to_string(3) + " " + collision_obj.label;
+        collide_msg_time = MAX_COL_TIME;
     }
     // --------- Push object off of surface ---------
     else if (collision_obj.collision_type == CollisionType::PushOff && !collision_obj.done) {
@@ -964,7 +1039,7 @@ void PlayMode::update(float elapsed) {
                     obj.transform->bbox[4].z = obj.end_height;
                     obj.transform->bbox[7].z = obj.end_height;
 
-                    score += 5;
+                    score += 7;
                     obj.collided = true;  // prevents user from gaining more points
                     obj.done = true;
 
@@ -972,6 +1047,10 @@ void PlayMode::update(float elapsed) {
                     if(collision_obj.has_sound) {
                         Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
                     }
+
+                    display_collide = true;
+                    collide_label = "+" + std::to_string(7) + " " + collision_obj.label;
+                    collide_msg_time = MAX_COL_TIME;
                 }
                 else {
                     obj.transform->position.z = height;
@@ -1142,17 +1221,15 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         kitchen_scene.draw(*player.camera);
     }
 
-    // !TODO handle gameover
-	// 	constexpr float H = 0.09f;
-    //     std::string message;
-    //     if (game_over) {
-    //         message = "Your Owner Came Back, GAME OVER!";
-    //     } 
     // Draw text
     {
         game_text.edit_state(game_text.SCORE, std::to_string(score));
         game_text.edit_state(game_text.TIME, game_timer.to_string());
-        game_text.edit_state(game_text.COLLISION, " e e e ");
+
+        if (display_collide) game_text.edit_state(game_text.COLLISION, collide_label);
+        else                 game_text.edit_state(game_text.COLLISION, " ");
+
+
         game_text.update_state();
         game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
     }

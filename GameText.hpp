@@ -62,7 +62,7 @@ struct GameText {
 
 	glm::vec3 score_color = glm::vec3(0.2f, 0.2f, 0.8f);
 	glm::vec3 time_color = glm::vec3(0.2f, 0.8f, 0.2f);
-	glm::vec3 collision_color = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 collision_color = glm::vec3(0.4f, 0.4f, 0.4f);
 
 	// -------- Font Character Rendering --------
 
@@ -84,7 +84,7 @@ struct GameText {
 		Belligerent_title = 0,
 		Belligerent_header = 1,
 		Nunito_title = 2,
-		Nunito = 3
+		Nunito = 3,
 	} FontID;
 
 	struct Font {

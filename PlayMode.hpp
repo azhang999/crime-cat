@@ -150,7 +150,7 @@ struct PlayMode : Mode {
 	float camera_radius = 10.0f;
 
 	struct GameTimer {
-		float seconds = 0.1f * 60.f;
+		float seconds = 1.0f * 60.f;		// TODO change back to 8min
 		std::string to_string() {
 			int sec = static_cast<int>(std::round(seconds));
 			int minutes = sec / 60;
@@ -167,5 +167,10 @@ struct PlayMode : Mode {
     Scene::Transform *wall1, *wall2, *wall3, *wall4;
 
 	std::string script_path = data_path("./text/play.txt");
-    GameText game_text; 
+    GameText game_text;
+
+	std::string collide_label;
+	bool display_collide = false;
+	const float MAX_COL_TIME = 3.0f;
+	float collide_msg_time = 3.0f;
 };

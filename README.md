@@ -29,5 +29,8 @@ We used music from the following sources:
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
 
+We referenced the following code to render images as 2D textures:
+- https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
+
 This game was built with [NEST](NEST.md).
 

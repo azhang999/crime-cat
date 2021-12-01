@@ -191,9 +191,6 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-// Load< Sound::Sample > bg_music(LoadTagDefault, []() -> Sound::Sample const * {
-// 	return new Sound::Sample(data_path("blippy_trance.wav"));
-// });
 // source: https://freesound.org/people/m_delaparra/sounds/338018/
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));
@@ -233,6 +230,14 @@ Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
 // source: https://freesound.org/people/dmadridp/sounds/233476/
 Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("typing.wav"));
+});
+// source: https://freesound.org/people/soundscalpel.com/sounds/110393/
+Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("splash.wav"));
+});
+// source: https://freesound.org/people/Mafon2/sounds/436541/
+Load< Sound::Sample > meow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("meow.wav"));
 });
 
 float get_top_height(Scene::Transform *transform) {

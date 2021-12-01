@@ -15,6 +15,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <unordered_map>
 
 
 struct PlayMode : Mode {
@@ -117,7 +118,7 @@ struct PlayMode : Mode {
         Scene::Transform *transform_front = nullptr;
 		Scene::Transform *transform_middle = nullptr;
         Scene::Transform *paw = nullptr;
-        // Scene::Transform *facing = nullptr;
+        Scene::Transform *mouth = nullptr;
 
         float radius = 0.5f;
         glm::vec3 tip;
@@ -131,6 +132,10 @@ struct PlayMode : Mode {
         float air_time = 0.0f;
         bool jumping = false;
 		bool swatting = false;
+
+        bool holding = false;
+        RoomObject *held_obj = nullptr; // just put in WallsDoorsFloorsStairs room
+
         float swatting_timer = 0.f;
 		bool on_table = false;
 
@@ -171,6 +176,25 @@ struct PlayMode : Mode {
     // bool collide_front = false;
     // bool collide_middle = false;
 
+    std::unordered_map<std::string, glm::vec3> mouth_pos = {
+        {"Walk0", glm::vec3(-1.4909f, 0.f, 0.54675f)},
+        {"Walk1", glm::vec3(-1.4909f, 0.f, 0.54675f)},
+        {"Walk2", glm::vec3(-1.4909f, 0.f, 0.54675f)},
+        {"Walk3", glm::vec3(-1.4909f, 0.f, 0.54675f)},
+        {"Walk4", glm::vec3(-1.4909f, 0.f, 0.54675f)},
+        {"UpJump0", glm::vec3(-1.2446f, 0.f, 0.72038f)},
+        {"UpJump1", glm::vec3(-1.1538f, 0.f, 0.87708f)},
+        {"UpJump2", glm::vec3(-0.87796f, 0.f, 1.282f)},
+        {"UpJump3", glm::vec3(-1.3959f, 0.f, 0.63079f)},
+        {"UpJump4", glm::vec3(-1.4997f, 0.f, 0.5395f)},
+        {"DownJump0", glm::vec3(-1.5279f, 0.f, -0.08138f)},
+        {"DownJump1", glm::vec3(-1.5454f, 0.f, -0.33257f)},
+        {"DownJump2", glm::vec3(-1.5105f, 0.f, -0.27474f)},
+        {"DownJump3", glm::vec3(-1.4688f, 0.f, -0.49124f)},
+        {"DownJump4", glm::vec3(-1.4156f, 0.f, -0.53854f)},
+        {"DownJump5", glm::vec3(-1.5273f, 0.f, -0.10533f)}
+    };
+
     struct Animation {
         std::vector<Scene::Drawable> frames;
         std::vector<float> frame_times;
@@ -180,6 +204,8 @@ struct PlayMode : Mode {
 
         void animate(Scene &scene, bool enable, float elapsed);
     } player_walking, player_up_jump, player_down_jump, player_swat;
+
+    std::vector<Scene::Drawable> player_held_items;
 
 	int score = 0;
 	float theta = -0.3f * (float)M_PI;

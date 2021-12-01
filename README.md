@@ -31,6 +31,10 @@ We used music from the following sources:
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
 
+We obtained the following free fonts from FontSquirrel
+- [Belligerent Madness](https://www.fontsquirrel.com/fonts/belligerent-madness)
+- [Nunito](https://www.fontsquirrel.com/fonts/nunito?q%5Bterm%5D=nunito&q%5Bsearch_check%5D=Y)
+
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
 

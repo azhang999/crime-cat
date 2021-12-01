@@ -75,7 +75,6 @@ struct GameText {
 	};
 
 	std::string belligerent_font_path = data_path("./font/BelligerentMadness/belligerent.ttf");
-	std::string blok_font_path = data_path("./font/Blokletters-Potlood/Blokletters-Potlood.ttf");
 	std::string nunito_font_path = data_path("./font/nunito/Nunito-Regular.ttf");
 	
 	// Fonts are associated with a typeface and a size style

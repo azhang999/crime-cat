@@ -25,6 +25,8 @@ We used music from the following sources:
 - [Door Sound](https://freesound.org/people/LG/sounds/73046/)
 - [Trophy/Lamp Sound](https://freesound.org/people/nicholasdaryl/sounds/563457/)
 - [Typing Sound](https://freesound.org/people/Debsound/sounds/168822/)
+- [Splash Sound](https://freesound.org/people/soundscalpel.com/sounds/110393/)
+- [Meow Sound](https://freesound.org/people/Mafon2/sounds/436541/)
 
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp

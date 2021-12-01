@@ -281,6 +281,14 @@ Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
 Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("typing.wav"));
 });
+// source: https://freesound.org/people/soundscalpel.com/sounds/110393/
+Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("splash.wav"));
+});
+// source: https://freesound.org/people/Mafon2/sounds/436541/
+Load< Sound::Sample > meow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("meow.wav"));
+});
 
 float get_top_height(Scene::Transform *transform) {
     if (transform->top_stand) {
@@ -852,9 +860,9 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
             objects.back().has_sound = true;
             objects.back().samples.push_back(&papers);
         }
-        if (drawable.transform->name == "Laptop") {
+        if (drawable.transform->name == "Laptop Screen") {
             objects.back().has_sound = true;
-            objects.back().samples.push_back(&typing); // can't hear this one?
+            objects.back().samples.push_back(&typing);
         }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
@@ -1590,14 +1598,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
                         if (vertical_collision_name == "Cat Bed") {
-                            // TODO: add meow sound
+                            Sound::play(*(*(&meow)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+10 New Toy";
                             collide_msg_time = 3.0f;
                             display_collide = true;
                             obj.transform->position = glm::vec3(1000.f);
                         } else if (vertical_collision_name == "Toilet.002") {
-                            // TODO: add splash sound
+                            Sound::play(*(*(&splash)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+12 Splash";
                             collide_msg_time = 3.0f;
@@ -1995,27 +2003,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // Maybe cat second to last?
         cat_scene.draw(*player.camera);
         // case on what's in current_rooms
-        if (current_rooms.size() == 1) {
-            // on stairs - just render everything
-            for (auto room_type : all_rooms) {
-                switch_rooms(room_type);
-                current_scene->draw(*player.camera);
-            }
-        } else if (current_rooms[1] == Kitchen || current_rooms[1] == Office || current_rooms[1] == LivingRoom) {
-            switch_rooms(WallsDoorsFloorsStairs);
-            current_scene->draw(*player.camera);
-            switch_rooms(Kitchen);
-            current_scene->draw(*player.camera);
-            switch_rooms(Office);
-            current_scene->draw(*player.camera);
-            switch_rooms(LivingRoom);
-            current_scene->draw(*player.camera);
-        } else if (current_rooms[1] == Bedroom || current_rooms[1] == Bathroom) {
-            switch_rooms(WallsDoorsFloorsStairs);
-            current_scene->draw(*player.camera);
-            switch_rooms(Bedroom);
-            current_scene->draw(*player.camera);
-            switch_rooms(Bathroom);
+        for (auto room_type : all_rooms) {
+            switch_rooms(room_type);
             current_scene->draw(*player.camera);
         }
 

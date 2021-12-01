@@ -229,15 +229,5 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
     }
 
 	// Draw text
-    // game_text.draw_text(game_text.LEFT_X, game_text.TOP_Y, glm::vec3(0.0f, 0.0f, 0.0f));
-	float height_offset = 50.0f;
-	for (size_t i = 0; i < 10; i++) {
-		game_text.render_text_buffer(i, game_text.LEFT_X, game_text.TOP_Y - height_offset, glm::vec3(1.0f, 1.0f, 1.0f), game_text.font_ids[i]);
-		height_offset += game_text.fonts[game_text.font_ids[i]].offset;
-	}
-
-	for (size_t i = 10; i < game_text.lines.size(); i++) {
-		game_text.render_text_buffer(i, game_text.LEFT_X, game_text.TOP_Y - height_offset, glm::vec3(0.0f, 0.0f, 0.0f), game_text.font_ids[i]);
-		height_offset += game_text.fonts[game_text.font_ids[i]].offset;
-	}
+    game_text.draw_text(game_text.LEFT_X, game_text.TOP_Y, glm::vec3(0.8f, 0.8f, 0.8f));
 }

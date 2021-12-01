@@ -82,8 +82,8 @@ struct GameText {
 	typedef enum FontID_t {
 		Belligerent_title = 0,
 		Belligerent_header = 1,
-		Nunito_title = 2,
-		Nunito = 3,
+		Belligerent_text = 2,
+
 	} FontID;
 
 	struct Font {

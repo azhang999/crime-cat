@@ -1616,18 +1616,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
 }
 
-// ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
-
-void PlayMode::update(float elapsed) {
-    std::cout << elapsed << std::endl;
-    if (game_over) return;
-
-    printf("elapsed: %f\n", elapsed);
-    if (elapsed == 0.f || elapsed > 0.5f) {
-        printf("ERROR elapsed time is %f\n", elapsed);
-        // exit(1);
-    }
-
+void PlayMode::partial_update(float elapsed) {
     game_timer.seconds -= elapsed;
     if (game_timer.seconds <= 0.f) {
         game_over = true;
@@ -1935,6 +1924,26 @@ void PlayMode::update(float elapsed) {
         player.camera->transform->rotation = glm::angleAxis(phi, up);
         player.camera->transform->rotation *= glm::angleAxis(-theta, right);
     }
+}
+
+// ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
+
+void PlayMode::update(float elapsed) {
+    std::cout << elapsed << std::endl;
+    if (game_over) return;
+
+    printf("elapsed: %f\n", elapsed);
+    if (elapsed == 0.f || elapsed > 0.5f) {
+        printf("ERROR elapsed time is %f\n", elapsed);
+        // exit(1);
+    }
+
+    float partial_elapsed = std::min({elapsed, 0.02f});
+    while (elapsed > 0.f) {
+        partial_update(partial_elapsed);
+        elapsed -= partial_elapsed;
+    }
+    
 
 	//reset button press counters:
 	left.downs = 0;

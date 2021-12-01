@@ -1986,10 +1986,31 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // ! TODO change order here
         // Maybe cat second to last?
         cat_scene.draw(*player.camera);
-        for (auto room_type : all_rooms) {
-            switch_rooms(room_type);
+        // case on what's in current_rooms
+        if (current_rooms.size() == 1) {
+            // on stairs - just render everything
+            for (auto room_type : all_rooms) {
+                switch_rooms(room_type);
+                current_scene->draw(*player.camera);
+            }
+        } else if (current_rooms[1] == Kitchen || current_rooms[1] == Office || current_rooms[1] == LivingRoom) {
+            switch_rooms(WallsDoorsFloorsStairs);
+            current_scene->draw(*player.camera);
+            switch_rooms(Kitchen);
+            current_scene->draw(*player.camera);
+            switch_rooms(Office);
+            current_scene->draw(*player.camera);
+            switch_rooms(LivingRoom);
+            current_scene->draw(*player.camera);
+        } else if (current_rooms[1] == Bedroom || current_rooms[1] == Bathroom) {
+            switch_rooms(WallsDoorsFloorsStairs);
+            current_scene->draw(*player.camera);
+            switch_rooms(Bedroom);
+            current_scene->draw(*player.camera);
+            switch_rooms(Bathroom);
             current_scene->draw(*player.camera);
         }
+
         shadow_scene.draw(*player.camera);
     }
 

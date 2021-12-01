@@ -364,7 +364,7 @@ bool shadow_intersect(Scene::Transform *transform, glm::vec3 cat_pos, glm::vec3 
 
 float PlayMode::get_surface_below_height(float &closest_dist) {
     float height = player.base.z;
-    closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
+    closest_dist = player.base.z + 0.0001f;
 
     for (auto room_type : current_rooms) {
         switch_rooms(room_type);
@@ -1594,7 +1594,6 @@ void PlayMode::update(float elapsed) {
         movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
         player.transform_middle->position += movement;
         player.update_position(player.transform_middle->position);
-        // shadow.update_position(player.base, &(living_room_floor->position.z));
     }
 
     { // rotate player

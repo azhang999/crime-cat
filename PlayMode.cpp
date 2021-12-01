@@ -399,6 +399,44 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
         drawable.transform->left_stand = (angleBetween(up, drawable.transform->left_n) < deg_45_in_rad);
         drawable.transform->right_stand = (angleBetween(up, drawable.transform->right_n) < deg_45_in_rad);
 
+        if (drawable.transform->top_stand) {
+            float max_z = std::max({bbox.P2.z, bbox.P3.z, bbox.P6.z, bbox.P7.z});
+            drawable.transform->bbox[1].z = max_z;
+            drawable.transform->bbox[2].z = max_z;
+            drawable.transform->bbox[5].z = max_z;
+            drawable.transform->bbox[6].z = max_z;
+        } else if (drawable.transform->bot_stand) {
+            float max_z = std::max({bbox.P1.z, bbox.P4.z, bbox.P5.z, bbox.P8.z});
+            drawable.transform->bbox[0].z = max_z;
+            drawable.transform->bbox[3].z = max_z;
+            drawable.transform->bbox[4].z = max_z;
+            drawable.transform->bbox[7].z = max_z;
+        } else if (drawable.transform->front_stand) {
+            float max_z = std::max({bbox.P3.z, bbox.P4.z, bbox.P7.z, bbox.P8.z});
+            drawable.transform->bbox[2].z = max_z;
+            drawable.transform->bbox[3].z = max_z;
+            drawable.transform->bbox[6].z = max_z;
+            drawable.transform->bbox[7].z = max_z;
+        } else if (drawable.transform->back_stand) {
+            float max_z = std::max({bbox.P1.z, bbox.P2.z, bbox.P5.z, bbox.P6.z});
+            drawable.transform->bbox[0].z = max_z;
+            drawable.transform->bbox[1].z = max_z;
+            drawable.transform->bbox[4].z = max_z;
+            drawable.transform->bbox[5].z = max_z;
+        } else if (drawable.transform->left_stand) {
+            float max_z = std::max({bbox.P5.z, bbox.P6.z, bbox.P7.z, bbox.P8.z});
+            drawable.transform->bbox[4].z = max_z;
+            drawable.transform->bbox[5].z = max_z;
+            drawable.transform->bbox[6].z = max_z;
+            drawable.transform->bbox[7].z = max_z;
+        } else if (drawable.transform->right_stand) {
+            float max_z = std::max({bbox.P1.z, bbox.P2.z, bbox.P3.z, bbox.P4.z});
+            drawable.transform->bbox[0].z = max_z;
+            drawable.transform->bbox[1].z = max_z;
+            drawable.transform->bbox[2].z = max_z;
+            drawable.transform->bbox[3].z = max_z;
+        }
+
         // auto transform = drawable.transform;
         // std::cout << transform->name << " "<< transform->top_stand << " " << transform->bot_stand 
         //                     << " " << transform->front_stand << " " << transform->back_stand

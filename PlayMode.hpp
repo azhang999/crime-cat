@@ -34,11 +34,15 @@ struct PlayMode : Mode {
 
 	//functions called by main loop:
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
-	virtual void update(float elapsed) override;
+	void partial_update(float elapsed);
+    virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
     void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
+
+    bool player_front_inside_bbox(Scene::Transform *transform);
+    void populate_current_rooms();
 
     void generate_wdfs_objects(Scene &scene, std::vector<RoomObject> &objects);
 	void generate_living_room_objects(Scene &scene, std::vector<RoomObject> &objects);
@@ -75,13 +79,17 @@ struct PlayMode : Mode {
 	std::vector<RoomObject> *current_objects = nullptr;
 
 	//local copy of the game scene (so code can change it during gameplay):
+	Scene shadow_scene;
 	Scene cat_scene;
+	
     Scene living_room_scene;
     Scene kitchen_scene;
     Scene wdfs_scene;
     Scene bedroom_scene;
     Scene bathroom_scene;
     Scene office_scene;
+
+    Scene bounds_scene; // SPECIAL
 
 	std::vector<RoomObject> living_room_objects;
 	std::vector<RoomObject> kitchen_objects;
@@ -92,6 +100,15 @@ struct PlayMode : Mode {
 
     // hardcode all rooms in for now
     std::vector<RoomType> current_rooms = {
+        WallsDoorsFloorsStairs, 
+        Kitchen, 
+        Bedroom, 
+        Bathroom,
+        Office,
+		LivingRoom		// hardcoded last so cat shadow can render last!
+    };
+
+    std::vector<RoomType> all_rooms = {
         WallsDoorsFloorsStairs, 
         Kitchen, 
         Bedroom, 
@@ -162,7 +179,7 @@ struct PlayMode : Mode {
 
 		void update_position(glm::vec3 new_pos, float height, float dist) {
 			drawable->transform->position = new_pos;
-			drawable->transform->position.z = height + 0.001f;
+			drawable->transform->position.z = height + 0.08f;
 			closest_dist = dist;
 		}
 	} shadow;

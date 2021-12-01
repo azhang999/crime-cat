@@ -522,7 +522,7 @@ void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject
         }
 
         if (drawable.transform->name == "Key") {
-            objects.back().capsule.radius = 0.5f;
+            objects.back().capsule.radius = 0.25f;
             objects.back().capsule.height = 0.5f;
         }
         
@@ -713,10 +713,10 @@ void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &
 
         objects.push_back( RoomObject(drawable.transform, type) );
         
-        if (drawable.transform->name == "Toothbrush") {
-            objects.back().capsule.radius = 0.1f;
-            objects.back().capsule.height = 0.2f;
-        }
+        // if (drawable.transform->name == "Toothbrush") {
+        //     objects.back().capsule.radius = 0.1f;
+        //     objects.back().capsule.height = 0.2f;
+        // }
         if (drawable.transform->name == "Bathroom Sink Faucet") {
             objects.back().has_sound = true;
             objects.back().samples.push_back(&click);
@@ -1095,6 +1095,7 @@ Scene::Transform *PlayMode::collide() {
             player_tip.z += 1.0f;
             player_base.z -= 1.0f;
             if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
+                printf("collided with: %s\n", obj.name.c_str());
                 num_collide_objs++;
                 collide_obj = obj.transform;
                 if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
@@ -1177,7 +1178,11 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             // put item down
             printf("putting down %s\n", player.held_obj->transform->name.c_str());
             object_collide_name = "";
-            player.held_obj->transform->position = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+            glm::vec3 abs_transform_front_pos = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+            glm::vec3 t_offset = abs_transform_front_pos - player.transform_middle->position;
+            t_offset.z = 0.f;
+            t_offset = glm::normalize(t_offset);
+            player.held_obj->transform->position = abs_transform_front_pos + (t_offset * 0.2f);
             player.held_obj->transform->position += glm::vec3(0.f, 0.f, 0.6f);
             restore_removed_bbox(*player.held_obj);
             player.held_obj = nullptr;
@@ -1373,7 +1378,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
             } else if (obj.collision_type == CollisionType::Steal) {
                 if (!player.holding || (player.held_obj->transform->name != obj.transform->name)) {
-                    // gravity - break if hits floor
+                    // gravity
+                    glm::vec3 orig_pos = obj.transform->position;
+
                     obj.transform->position.z -= elapsed * 6.0f;
                     obj.capsule.tip = obj.transform->position;
                     obj.capsule.tip.z += obj.capsule.height/2;
@@ -1382,8 +1389,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
-                        obj.pen_dir.z = std::abs(obj.pen_dir.z);
-                        obj.transform->position += ((obj.pen_depth + 0.00001f) * obj.pen_dir);
+                        obj.transform->position = orig_pos;
+                        // obj.pen_dir.z = std::abs(obj.pen_dir.z);
+                        // obj.transform->position += ((obj.pen_depth + 0.00001f) * obj.pen_dir);
                     }
 
                     restore_removed_bbox(obj);
@@ -1536,8 +1544,14 @@ void PlayMode::update(float elapsed) {
         float top_height = living_room_floor->position.z;           // TODO generalize to previous surface height
         if (use_up_vec) {
             top_height = get_top_height(object_collide);
-            new_pos =  player.transform_middle->position;
-            new_pos.z = top_height + 1.00001f;
+
+            glm::vec3 offset = ((penetration_depth + 0.0001f) * glm::normalize(penetration_normal));
+            // offset.z = 0;// ((penetration_depth + 0.000001f) * glm::normalize(penetration_normal).z);
+            new_pos = player.transform_middle->position + offset;
+
+
+            // new_pos =  player.transform_middle->position;
+            // new_pos.z = top_height + 1.00001f;
         } else {
             glm::vec3 offset = ((penetration_depth + 0.25f) * glm::normalize(penetration_normal));
             offset.z = 0;// ((penetration_depth + 0.000001f) * glm::normalize(penetration_normal).z);

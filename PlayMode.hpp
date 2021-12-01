@@ -129,6 +129,10 @@ struct PlayMode : Mode {
         float air_time = 0.0f;
         bool jumping = false;
 		bool swatting = false;
+
+        bool holding = false;
+        RoomObject *held_obj = nullptr; // just put in WallsDoorsFloorsStairs room
+
         float swatting_timer = 0.f;
 		bool on_table = false;
 

@@ -753,9 +753,9 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
             objects.back().has_sound = true;
             objects.back().samples.push_back(&papers);
         }
-        if (drawable.transform->name == "Laptop") {
+        if (drawable.transform->name == "Laptop Screen") {
             objects.back().has_sound = true;
-            objects.back().samples.push_back(&typing); // can't hear this one?
+            objects.back().samples.push_back(&typing);
         }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;

@@ -1598,14 +1598,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
                         if (vertical_collision_name == "Cat Bed") {
-                            // TODO: add meow sound
+                            Sound::play(*(*(&meow)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+10 New Toy";
                             collide_msg_time = 3.0f;
                             display_collide = true;
                             obj.transform->position = glm::vec3(1000.f);
                         } else if (vertical_collision_name == "Toilet.002") {
-                            // TODO: add splash sound
+                            Sound::play(*(*(&splash)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+12 Splash";
                             collide_msg_time = 3.0f;

@@ -79,6 +79,14 @@ Load< MeshBuffer > office_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+GLuint bounds_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > bounds_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Bounds Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("bounds.pnct"), data_path("bounds.boundbox"));
+	bounds_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
 // angle in radians between two 3d vectors
 float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
@@ -217,6 +225,22 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
+Load< Scene > bounds_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bounds.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = bounds_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = bounds_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
 // source: https://freesound.org/people/m_delaparra/sounds/338018/
 Load< Sound::Sample > shattering(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("shattering.wav"));
@@ -256,6 +280,14 @@ Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
 // source: https://freesound.org/people/dmadridp/sounds/233476/
 Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("typing.wav"));
+});
+// source: https://freesound.org/people/soundscalpel.com/sounds/110393/
+Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("splash.wav"));
+});
+// source: https://freesound.org/people/Mafon2/sounds/436541/
+Load< Sound::Sample > meow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("meow.wav"));
 });
 
 float get_top_height(Scene::Transform *transform) {
@@ -364,7 +396,7 @@ bool shadow_intersect(Scene::Transform *transform, glm::vec3 cat_pos, glm::vec3 
 
 float PlayMode::get_surface_below_height(float &closest_dist) {
     float height = player.base.z;
-    closest_dist = glm::length(player.base.z - glm::vec3(0,0,-0.0001f)); // account for minute differences
+    closest_dist = player.base.z + 0.0001f;
 
     for (auto room_type : current_rooms) {
         switch_rooms(room_type);
@@ -828,9 +860,9 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
             objects.back().has_sound = true;
             objects.back().samples.push_back(&papers);
         }
-        if (drawable.transform->name == "Laptop") {
+        if (drawable.transform->name == "Laptop Screen") {
             objects.back().has_sound = true;
-            objects.back().samples.push_back(&typing); // can't hear this one?
+            objects.back().samples.push_back(&typing);
         }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
@@ -935,6 +967,54 @@ void PlayMode::switch_rooms(RoomType room_type) {
     }
 }
 
+bool PlayMode::player_front_inside_bbox(Scene::Transform *transform) {
+    glm::vec3 player_front_pos = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+    float x_min = std::min({transform->bbox[0].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[4].x, transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x });
+    float x_max = std::max({transform->bbox[0].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[4].x, transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x });
+    float y_min = std::min({transform->bbox[0].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[4].y, transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y });
+    float y_max = std::max({transform->bbox[0].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[4].y, transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y });
+    float z_min = std::min({transform->bbox[0].z, transform->bbox[1].z, transform->bbox[2].z, transform->bbox[3].z, transform->bbox[4].z, transform->bbox[5].z, transform->bbox[6].z, transform->bbox[7].z });
+    float z_max = std::max({transform->bbox[0].z, transform->bbox[1].z, transform->bbox[2].z, transform->bbox[3].z, transform->bbox[4].z, transform->bbox[5].z, transform->bbox[6].z, transform->bbox[7].z });
+
+    // printf("room: x %f %f y %f %f z %f %f\n", x_min, x_max, y_min, y_max, z_min, z_max);
+    // printf("player: x %f y %f z %f\n", player_front_pos.x, player_front_pos.y, player_front_pos.z);
+
+    return ((player_front_pos.x <= x_max) && 
+            (player_front_pos.x >= x_min) && 
+            (player_front_pos.y <= y_max) && 
+            (player_front_pos.y >= y_min) &&
+            (player_front_pos.z <= z_max) && 
+            (player_front_pos.z >= z_min));
+}
+
+void PlayMode::populate_current_rooms() {
+    current_rooms.clear();
+    current_rooms.push_back(WallsDoorsFloorsStairs); // always have this
+
+    // loop through bounds_scene and check point in axis aligned bbox
+    for (auto &drawable : bounds_scene.drawables) {
+        // printf("loop: %s\n", drawable.transform->name.c_str());
+        if (player_front_inside_bbox(drawable.transform)) {
+            std::string bound_name = drawable.transform->name;
+
+            if (bound_name == "KitchenBounds") {
+                current_rooms.push_back(Kitchen);
+            } else if (bound_name == "LivingRoomBounds") {
+                current_rooms.push_back(LivingRoom);
+            } else if (bound_name == "BedroomBounds") {
+                current_rooms.push_back(Bedroom);
+            } else if (bound_name == "BathroomBounds") {
+                current_rooms.push_back(Bathroom);
+            } else if (bound_name == "OfficeBounds") {
+                current_rooms.push_back(Office);
+            } else {
+                printf("ERROR (populate_current_rooms) Room %s not implemented yet\n", drawable.transform->name.c_str());
+                exit(1);
+            }
+        }
+    }
+}
+
 PlayMode::PlayMode() : 
     shadow_scene(*shadow_scene_load), 
     cat_scene(*cat_scene_load), 
@@ -943,9 +1023,11 @@ PlayMode::PlayMode() :
     wdfs_scene(*walls_doors_floors_stairs_scene_load),
     bedroom_scene(*bedroom_scene_load),
     bathroom_scene(*bathroom_scene_load),
-    office_scene(*office_scene_load) {
+    office_scene(*office_scene_load),
+    bounds_scene(*bounds_scene_load) {
     
     GenerateBBox(cat_scene, cat_meshes);
+    GenerateBBox(bounds_scene, bounds_meshes);
 
     // remove player capsule from being drawn
     RemoveFrameByName(cat_scene, "Player");
@@ -1290,6 +1372,19 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             t_offset = glm::normalize(t_offset);
             player.held_obj->transform->position = abs_transform_front_pos + (t_offset * 0.2f);
             player.held_obj->transform->position += glm::vec3(0.f, 0.f, 0.6f);
+
+            // put object in current_object
+            if (current_rooms.size() == 0) {
+                printf("ERROR: current_rooms size is 0\n");
+            } else if (current_rooms.size() == 1) {
+                // on stairs area
+                switch_rooms(current_rooms[0]);
+                current_objects->push_back(*player.held_obj);
+            } else {
+                switch_rooms(current_rooms[1]);
+                current_objects->push_back(*player.held_obj);   
+            }
+            
             restore_removed_bbox(*player.held_obj);
             player.held_obj = nullptr;
             player.holding = false;
@@ -1346,6 +1441,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.prev_position = collision_obj.transform->position;
                 collision_obj.transform->position = glm::vec3(-10000);
                 pseudo_remove_bbox(collision_obj);
+                // remove obj from scene it is in
+                // current_objects->erase(collision_obj_iter);
+
                 break;
             }
             case CollisionType::Destroy: {
@@ -1500,14 +1598,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
                         if (vertical_collision_name == "Cat Bed") {
-                            // TODO: add meow sound
+                            Sound::play(*(*(&meow)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+10 New Toy";
                             collide_msg_time = 3.0f;
                             display_collide = true;
                             obj.transform->position = glm::vec3(1000.f);
                         } else if (vertical_collision_name == "Toilet.002") {
-                            // TODO: add splash sound
+                            Sound::play(*(*(&splash)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+12 Splash";
                             collide_msg_time = 3.0f;
@@ -1526,17 +1624,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
 }
 
-// ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
-
-void PlayMode::update(float elapsed) {
-    std::cout << elapsed << std::endl;
-    if (game_over) return;
-
-    if (elapsed == 0.f || elapsed > 0.5f) {
-        printf("ERROR elapsed time is %f\n", elapsed);
-        // exit(1);
-    }
-
+void PlayMode::partial_update(float elapsed) {
     game_timer.seconds -= elapsed;
     if (game_timer.seconds <= 0.f) {
         game_over = true;
@@ -1544,6 +1632,8 @@ void PlayMode::update(float elapsed) {
         game_timer.seconds = 0.f;
         return;
     }
+
+    populate_current_rooms();
 
     if (display_collide) {
         collide_msg_time -= elapsed;
@@ -1594,7 +1684,6 @@ void PlayMode::update(float elapsed) {
         movement = player.transform_middle->make_local_to_world() * glm::vec4(move.x, move.y, 0.f, 1.f) - player.transform_middle->position;
         player.transform_middle->position += movement;
         player.update_position(player.transform_middle->position);
-        // shadow.update_position(player.base, &(living_room_floor->position.z));
     }
 
     { // rotate player
@@ -1770,7 +1859,7 @@ void PlayMode::update(float elapsed) {
     // make held item => scale 1.0, other scale 0.f
     
     { // camera position
-        glm::vec3 camera_center = player.transform_middle->position;
+        glm::vec3 camera_center = player.transform_middle->make_local_to_world() * glm::vec4(0.0f, 0.0f, 0.8f, 1.0f);
         glm::vec3 camera_direction = glm::vec3(
             cos(phi + M_PI/2) * sin(theta),
             sin(phi + M_PI/2) * sin(theta),
@@ -1816,9 +1905,7 @@ void PlayMode::update(float elapsed) {
         for (auto room_type : current_rooms) {
             switch_rooms(room_type);
             for (auto &drawable : current_scene->drawables) {
-                 if (drawable.transform->name == "Magazine Collided"
-                ||  drawable.transform->name == "Mug Collided")
-                    continue;
+                 if (drawable.transform->name == "Magazine Collided") continue;
                 radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
             }
         }
@@ -1842,6 +1929,26 @@ void PlayMode::update(float elapsed) {
         player.camera->transform->rotation = glm::angleAxis(phi, up);
         player.camera->transform->rotation *= glm::angleAxis(-theta, right);
     }
+}
+
+// ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
+
+void PlayMode::update(float elapsed) {
+    std::cout << elapsed << std::endl;
+    if (game_over) return;
+
+    printf("elapsed: %f\n", elapsed);
+    if (elapsed == 0.f || elapsed > 0.5f) {
+        printf("ERROR elapsed time is %f\n", elapsed);
+        // exit(1);
+    }
+
+    float partial_elapsed = std::min({elapsed, 0.02f});
+    while (elapsed > 0.f) {
+        partial_update(partial_elapsed);
+        elapsed -= partial_elapsed;
+    }
+    
 
 	//reset button press counters:
 	left.downs = 0;
@@ -1893,10 +2000,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // ! TODO change order here
         // Maybe cat second to last?
         cat_scene.draw(*player.camera);
-        for (auto room_type : current_rooms) {
+        // case on what's in current_rooms
+        for (auto room_type : all_rooms) {
             switch_rooms(room_type);
             current_scene->draw(*player.camera);
         }
+
         shadow_scene.draw(*player.camera);
     }
 

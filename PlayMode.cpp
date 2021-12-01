@@ -70,6 +70,14 @@ Load< MeshBuffer > office_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	return ret;
 });
 
+GLuint bounds_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > bounds_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Bounds Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("bounds.pnct"), data_path("bounds.boundbox"));
+	bounds_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
 // angle in radians between two 3d vectors
 float angleBetween(glm::vec3 x, glm::vec3 y) {
     return glm::acos(glm::dot(glm::normalize(x), glm::normalize(y)));
@@ -193,6 +201,22 @@ Load< Scene > office_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = office_meshes_for_lit_color_texture_program;
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+
+	});
+});
+
+Load< Scene > bounds_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bounds.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        // printf("Mesh Name: %s\n", mesh_name.c_str());
+		Mesh const &mesh = bounds_meshes->lookup(mesh_name);
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = bounds_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -918,6 +942,54 @@ void PlayMode::switch_rooms(RoomType room_type) {
     }
 }
 
+bool PlayMode::player_front_inside_bbox(Scene::Transform *transform) {
+    glm::vec3 player_front_pos = player.transform_front->make_local_to_world() * glm::vec4(player.transform_front->position, 1.0f);
+    float x_min = std::min({transform->bbox[0].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[4].x, transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x });
+    float x_max = std::max({transform->bbox[0].x, transform->bbox[1].x, transform->bbox[2].x, transform->bbox[3].x, transform->bbox[4].x, transform->bbox[5].x, transform->bbox[6].x, transform->bbox[7].x });
+    float y_min = std::min({transform->bbox[0].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[4].y, transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y });
+    float y_max = std::max({transform->bbox[0].y, transform->bbox[1].y, transform->bbox[2].y, transform->bbox[3].y, transform->bbox[4].y, transform->bbox[5].y, transform->bbox[6].y, transform->bbox[7].y });
+    float z_min = std::min({transform->bbox[0].z, transform->bbox[1].z, transform->bbox[2].z, transform->bbox[3].z, transform->bbox[4].z, transform->bbox[5].z, transform->bbox[6].z, transform->bbox[7].z });
+    float z_max = std::max({transform->bbox[0].z, transform->bbox[1].z, transform->bbox[2].z, transform->bbox[3].z, transform->bbox[4].z, transform->bbox[5].z, transform->bbox[6].z, transform->bbox[7].z });
+
+    // printf("room: x %f %f y %f %f z %f %f\n", x_min, x_max, y_min, y_max, z_min, z_max);
+    // printf("player: x %f y %f z %f\n", player_front_pos.x, player_front_pos.y, player_front_pos.z);
+
+    return ((player_front_pos.x <= x_max) && 
+            (player_front_pos.x >= x_min) && 
+            (player_front_pos.y <= y_max) && 
+            (player_front_pos.y >= y_min) &&
+            (player_front_pos.z <= z_max) && 
+            (player_front_pos.z >= z_min));
+}
+
+void PlayMode::populate_current_rooms() {
+    current_rooms.clear();
+    current_rooms.push_back(WallsDoorsFloorsStairs); // always have this
+
+    // loop through bounds_scene and check point in axis aligned bbox
+    for (auto &drawable : bounds_scene.drawables) {
+        // printf("loop: %s\n", drawable.transform->name.c_str());
+        if (player_front_inside_bbox(drawable.transform)) {
+            std::string bound_name = drawable.transform->name;
+
+            if (bound_name == "KitchenBounds") {
+                current_rooms.push_back(Kitchen);
+            } else if (bound_name == "LivingRoomBounds") {
+                current_rooms.push_back(LivingRoom);
+            } else if (bound_name == "BedroomBounds") {
+                current_rooms.push_back(Bedroom);
+            } else if (bound_name == "BathroomBounds") {
+                current_rooms.push_back(Bathroom);
+            } else if (bound_name == "OfficeBounds") {
+                current_rooms.push_back(Office);
+            } else {
+                printf("ERROR (populate_current_rooms) Room %s not implemented yet\n", drawable.transform->name.c_str());
+                exit(1);
+            }
+        }
+    }
+}
+
 PlayMode::PlayMode() : 
     cat_scene(*cat_scene_load), 
     living_room_scene(*living_room_scene_load), 
@@ -925,9 +997,11 @@ PlayMode::PlayMode() :
     wdfs_scene(*walls_doors_floors_stairs_scene_load),
     bedroom_scene(*bedroom_scene_load),
     bathroom_scene(*bathroom_scene_load),
-    office_scene(*office_scene_load) {
+    office_scene(*office_scene_load),
+    bounds_scene(*bounds_scene_load) {
     
     GenerateBBox(cat_scene, cat_meshes);
+    GenerateBBox(bounds_scene, bounds_meshes);
 
     // remove player capsule from being drawn
     RemoveFrameByName(cat_scene, "Player");
@@ -1511,6 +1585,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 void PlayMode::update(float elapsed) {
     if (game_over) return;
 
+    printf("elapsed: %f\n", elapsed);
     if (elapsed == 0.f || elapsed > 0.5f) {
         printf("ERROR elapsed time is %f\n", elapsed);
         // exit(1);
@@ -1523,6 +1598,8 @@ void PlayMode::update(float elapsed) {
         game_timer.seconds = 0.f;
         return;
     }
+
+    populate_current_rooms();
 
     if (display_collide) {
         collide_msg_time -= elapsed;
@@ -1865,9 +1942,9 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        cat_scene.draw(*player.camera);
-        living_room_scene.draw(*player.camera);
-        kitchen_scene.draw(*player.camera);
+        // cat_scene.draw(*player.camera);
+        // living_room_scene.draw(*player.camera);
+        // kitchen_scene.draw(*player.camera);
     }
 
     // Draw text
@@ -1907,7 +1984,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	cat_scene.draw(*player.camera);
-    for (auto room_type : current_rooms) {
+    for (auto room_type : all_rooms) {
         switch_rooms(room_type);
         current_scene->draw(*player.camera);
     }

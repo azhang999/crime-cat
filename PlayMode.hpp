@@ -40,6 +40,9 @@ struct PlayMode : Mode {
     void GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes);
 	void updateBBox(Scene::Transform *transform, glm::vec3 displacement);
 
+    bool player_front_inside_bbox(Scene::Transform *transform);
+    void populate_current_rooms();
+
     void generate_wdfs_objects(Scene &scene, std::vector<RoomObject> &objects);
 	void generate_living_room_objects(Scene &scene, std::vector<RoomObject> &objects);
     void generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &objects);
@@ -83,6 +86,8 @@ struct PlayMode : Mode {
     Scene bathroom_scene;
     Scene office_scene;
 
+    Scene bounds_scene; // SPECIAL
+
 	std::vector<RoomObject> living_room_objects;
 	std::vector<RoomObject> kitchen_objects;
     std::vector<RoomObject> wdfs_objects;
@@ -92,6 +97,15 @@ struct PlayMode : Mode {
 
     // hardcode all rooms in for now
     std::vector<RoomType> current_rooms = {
+        WallsDoorsFloorsStairs, 
+        Kitchen, 
+        Bedroom, 
+        Bathroom,
+        Office,
+		LivingRoom		// hardcoded last so cat shadow can render last!
+    };
+
+    std::vector<RoomType> all_rooms = {
         WallsDoorsFloorsStairs, 
         Kitchen, 
         Bedroom, 

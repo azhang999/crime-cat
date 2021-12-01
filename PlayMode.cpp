@@ -1859,7 +1859,7 @@ void PlayMode::partial_update(float elapsed) {
     // make held item => scale 1.0, other scale 0.f
     
     { // camera position
-        glm::vec3 camera_center = player.transform_middle->position;
+        glm::vec3 camera_center = player.transform_middle->make_local_to_world() * glm::vec4(0.0f, 0.0f, 0.8f, 1.0f);
         glm::vec3 camera_direction = glm::vec3(
             cos(phi + M_PI/2) * sin(theta),
             sin(phi + M_PI/2) * sin(theta),
@@ -1905,9 +1905,7 @@ void PlayMode::partial_update(float elapsed) {
         for (auto room_type : current_rooms) {
             switch_rooms(room_type);
             for (auto &drawable : current_scene->drawables) {
-                 if (drawable.transform->name == "Magazine Collided"
-                ||  drawable.transform->name == "Mug Collided")
-                    continue;
+                 if (drawable.transform->name == "Magazine Collided") continue;
                 radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
             }
         }

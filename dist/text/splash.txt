@@ -1,5 +1,4 @@
-1 0
-CRIME CAT
+3 1
 
-1 2
-               PRESS "P" TO PLAY
+
+        PRESS "P" TO PLAY

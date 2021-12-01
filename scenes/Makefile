@@ -17,6 +17,9 @@ EXPORT_BOUNDBOX=export-boundbox.py
 DIST=../dist
 
 all : \
+	$(DIST)/shadow.pnct \
+	$(DIST)/shadow.scene \
+	$(DIST)/shadow.boundbox \
 	$(DIST)/cat.pnct \
 	$(DIST)/cat.scene \
 	$(DIST)/cat.boundbox \
@@ -38,6 +41,16 @@ all : \
 	$(DIST)/office.pnct \
 	$(DIST)/office.scene \
 	$(DIST)/office.boundbox \
+
+$(DIST)/shadow.scene : shadow.blend $(EXPORT_SCENE)
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Shadow '$@'
+
+$(DIST)/shadow.pnct : shadow.blend $(EXPORT_MESHES)
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Shadow '$@'
+
+$(DIST)/shadow.boundbox : shadow.blend $(EXPORT_BOUNDBOX)
+	$(BLENDER) --background --python $(EXPORT_BOUNDBOX) -- '$<':Shadow '$@'
+
 
 $(DIST)/cat.scene : cat.blend $(EXPORT_SCENE)
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Player '$@'

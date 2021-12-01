@@ -13,20 +13,29 @@
 #include <random>
 #include <iostream>
 
+GLuint shadow_meshes_for_blob_shadow_texture_program = 0;
+Load< MeshBuffer > shadow_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+    printf("Creating Shadow Meshes\n");
+	MeshBuffer const *ret = new MeshBuffer(data_path("shadow.pnct"), data_path("shadow.boundbox"));
+	shadow_meshes_for_blob_shadow_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
+
+
 GLuint cat_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > cat_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-    printf("Creating Cat Meshes\n");
+    // printf("Creating Cat Meshes\n");
 	MeshBuffer const *ret = new MeshBuffer(data_path("cat.pnct"), data_path("cat.boundbox"));
 	cat_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
 GLuint living_room_meshes_for_lit_color_texture_program = 0;
-GLuint living_room_meshes_for_blob_shadow_texture_program = 0;
+// GLuint living_room_meshes_for_blob_shadow_texture_program = 0;
 Load< MeshBuffer > living_room_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("living_room.pnct"), data_path("living_room.boundbox"));
 	living_room_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
-    living_room_meshes_for_blob_shadow_texture_program = ret->make_vao_for_program(blob_shadow_texture_program->program);
+    // living_room_meshes_for_blob_shadow_texture_program = ret->make_vao_for_program(blob_shadow_texture_program->program);
 	return ret;
 });
 
@@ -83,20 +92,28 @@ Load< Scene > cat_scene_load(LoadTagDefault, []() -> Scene const * {
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 		drawable.pipeline.vao = cat_meshes_for_lit_color_texture_program;
-        // if (transform->name == "CatShadow") {                                // TODO: This breaks! I don't know why! Better just to keep the shadow in the living room.
-        //     drawable.pipeline = blob_shadow_texture_program_pipeline;
-        //     drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
-        // }
-        // else {
-        //     drawable.pipeline = lit_color_texture_program_pipeline;
-        //     drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
-        // }
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
 
 	});
 });
+
+Load< Scene > shadow_scene_load(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("shadow.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = shadow_meshes->lookup(mesh_name);
+
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+        
+        drawable.pipeline = blob_shadow_texture_program_pipeline;
+        drawable.pipeline.vao = shadow_meshes_for_blob_shadow_texture_program;
+        drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+	});
+});
+
 
 Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("living_room.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
@@ -105,15 +122,15 @@ Load< Scene > living_room_scene_load(LoadTagDefault, []() -> Scene const * {
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
         
-        if (transform->name == "CatShadow") {
-            drawable.pipeline = blob_shadow_texture_program_pipeline;
-            drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
-            drawable.last_pass = true;
-        }
-        else {
-            drawable.pipeline = lit_color_texture_program_pipeline;
-            drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
-        }
+        // if (transform->name == "CatShadow") {
+        //     drawable.pipeline = blob_shadow_texture_program_pipeline;
+        //     drawable.pipeline.vao = living_room_meshes_for_blob_shadow_texture_program;
+        //     drawable.last_pass = true;
+        // }
+        // else {
+        drawable.pipeline = lit_color_texture_program_pipeline;
+        drawable.pipeline.vao = living_room_meshes_for_lit_color_texture_program;
+        // }
         drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -919,6 +936,7 @@ void PlayMode::switch_rooms(RoomType room_type) {
 }
 
 PlayMode::PlayMode() : 
+    shadow_scene(*shadow_scene_load), 
     cat_scene(*cat_scene_load), 
     living_room_scene(*living_room_scene_load), 
     kitchen_scene(*kitchen_scene_load),
@@ -982,9 +1000,13 @@ PlayMode::PlayMode() :
     switch_rooms(RoomType::LivingRoom);
 
     // Get shadow transform 
-    auto shadow_iter = find_if(living_room_scene.drawables.begin(), living_room_scene.drawables.end(),
-                                        [](const Scene::Drawable &elem) { return elem.transform->name == "CatShadow"; });
-    if (shadow_iter != living_room_scene.drawables.end()) {
+
+    for (auto drawable : shadow_scene.drawables) {
+        std::cout << drawable.transform->name << std::endl;
+    }
+    auto shadow_iter = find_if(shadow_scene.drawables.begin(), shadow_scene.drawables.end(),
+                                        [](const Scene::Drawable &elem) { return elem.transform->name == "Shadow"; });
+    if (shadow_iter != shadow_scene.drawables.end()) {
         shadow.drawable = &(*shadow_iter);
         shadow.drawable->transform->position = living_room_floor->position;
     } else {
@@ -995,8 +1017,6 @@ PlayMode::PlayMode() :
     game_text.PLAYMODE = true;
     game_text.init_state(script_path);
     game_text.fill_state();
-    // ------------- Start background music! ---------------
-    // bg_loop = Sound::loop_3D(*bg_music, 0.1f, glm::vec3(0), 5.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -1509,6 +1529,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 // ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
 
 void PlayMode::update(float elapsed) {
+    std::cout << elapsed << std::endl;
     if (game_over) return;
 
     if (elapsed == 0.f || elapsed > 0.5f) {
@@ -1865,89 +1886,34 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        // cat_scene.draw(*player.camera);
+        // living_room_scene.draw(*player.camera);
+        // kitchen_scene.draw(*player.camera);
+
+        // ! TODO change order here
+        // Maybe cat second to last?
         cat_scene.draw(*player.camera);
-        living_room_scene.draw(*player.camera);
-        kitchen_scene.draw(*player.camera);
+        for (auto room_type : current_rooms) {
+            switch_rooms(room_type);
+            current_scene->draw(*player.camera);
+        }
+        shadow_scene.draw(*player.camera);
     }
 
     // Draw text
-    game_text.edit_state(game_text.SCORE, std::to_string(score));
-    game_text.edit_state(game_text.TIME, game_timer.to_string());
+    {
+        game_text.edit_state(game_text.SCORE, std::to_string(score));
+        game_text.edit_state(game_text.TIME, game_timer.to_string());
 
-    if (display_collide) game_text.edit_state(game_text.COLLISION, collide_label);
-    else                 game_text.edit_state(game_text.COLLISION, " ");
-	//update camera aspect ratio for drawable:
-	player.camera->aspect = float(drawable_size.x) / float(drawable_size.y);
+        if (display_collide) game_text.edit_state(game_text.COLLISION, collide_label);
+        else                 game_text.edit_state(game_text.COLLISION, " ");
 
-	//set up light type and position for lit_color_texture_program:
-	// TODO: consider using the Light(s) in the scene to do this
-	glUseProgram(lit_color_texture_program->program);
-	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
-	glUseProgram(0);
-
-    glUseProgram(blob_shadow_texture_program->program);
-	glUniform1i(blob_shadow_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(blob_shadow_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(blob_shadow_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
-    glUniform1f(blob_shadow_texture_program->DEPTH_float, shadow.closest_dist);
-	glUseProgram(0);
-
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glDisable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
-
-    // Enable blending - suggestions here from http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-10-transparency/
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	cat_scene.draw(*player.camera);
-    for (auto room_type : current_rooms) {
-        switch_rooms(room_type);
-        current_scene->draw(*player.camera);
+        glDisable(GL_DEPTH_TEST);
+        game_text.update_state();
+        game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
     }
-    // wdfs_scene.draw(*player.camera);
-    // living_room_scene.draw(*player.camera);
-    // kitchen_scene.draw(*player.camera);
 
-    // { // DISPLAY BOUNDING BOXES FOR DEBUG PURPOSES!!!!!
-        // glDisable(GL_DEPTH_TEST);
-        // DrawLines draw_lines(player.camera->make_projection() * glm::mat4(player.camera->transform->make_world_to_local()));
-
-        // for (auto room_type : current_rooms) {
-        //     switch_rooms(room_type);
-        
-        //     for (auto obj : (*current_objects)) {
-        //         if (obj.collision_type != CollisionType::PushOff && obj.collision_type != CollisionType::Steal) continue;
-        //         auto tip = obj.capsule.tip;
-        //         auto base = obj.capsule.base;
-        //         auto r = obj.capsule.radius;
-
-        //         // tip
-        //         glm::vec3 tip_center = glm::vec3(tip.x, tip.y, tip.z - r);
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(tip_center, tip_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-
-        //         // base
-        //         glm::vec3 base_center = glm::vec3(base.x, base.y, base.z + r);
-        //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, -r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, 0.f, r), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(base_center, base_center + glm::vec3(0.f, -r, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(base_center, base_center + glm::vec3(r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //         draw_lines.draw(base_center, base_center + glm::vec3(-r, 0.f, 0.f), glm::u8vec4(0xff, 0xff, 0x00, 0xff));
-        //     }
-        // }
-
+    // Draw text
         // draw_lines.draw(center_, tri_point_, glm::u8vec4(0xff, 0x00, 0x00, 0xff));
         // float r = player.radius;
 
@@ -2026,12 +1992,4 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         //     draw_lines.draw(drawable.transform->bbox[4], drawable.transform->bbox[5], glm::u8vec4(0x00, 0xff, 0x00, 0xff));
 
         // }
-
-    // }
-
-	{ //overlay some text:
-        glDisable(GL_DEPTH_TEST);
-        game_text.update_state();
-        game_text.draw_text(game_text.LEFT_X - 20.0f, game_text.TOP_Y + 20.0f, glm::vec3(0.1f, 0.1f, 0.1f));
-    }
 }

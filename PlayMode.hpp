@@ -75,7 +75,9 @@ struct PlayMode : Mode {
 	std::vector<RoomObject> *current_objects = nullptr;
 
 	//local copy of the game scene (so code can change it during gameplay):
+	Scene shadow_scene;
 	Scene cat_scene;
+	
     Scene living_room_scene;
     Scene kitchen_scene;
     Scene wdfs_scene;

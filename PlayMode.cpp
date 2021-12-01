@@ -1063,7 +1063,7 @@ std::string PlayMode::capsule_collide(RoomObject &current_obj, glm::vec3 *pen_no
     for (auto room_type : current_rooms) {
         switch_rooms(room_type);
         for (auto obj : *current_objects) {
-            if (obj.name == "Rug") continue; // Rug is kinda blocky      
+            // if (obj.name == "Rug") continue; // Rug is kinda blocky      
             if (obj.name == current_obj.name) continue;
 
             auto capsule = current_obj.capsule;
@@ -1116,7 +1116,25 @@ Scene::Transform *PlayMode::collide() {
         switch_rooms(room_type);
 
         for (auto obj : *current_objects) {
-            if (obj.name == "Rug") continue; // Rug is kinda blocky
+            // skip over thin/small things
+            // living room
+            if (obj.name == "Rug") continue;
+
+            // kitchen
+            if (obj.name == "Mat") continue;
+            if (obj.name == "Spider Burner") continue;
+            if (obj.name == "Spider Burner.001") continue;
+            if (obj.name == "Spider Burner.002") continue;
+            if (obj.name == "Spider Burner.003") continue;
+
+            // bathroom
+            if (obj.name == "Bath Mat") continue;
+            if (obj.name == "Bath Mat.001") continue;
+
+            // office
+            if (obj.name == "Desk Mat") continue;
+            if (obj.name == "Pencil") continue;
+
             if (obj.collision_type == CollisionType::Steal) continue;
             // printf("transform_front:.....\n");
             // printf("transform_front: %f %f %f\n", player.transform_front->position.x, player.transform_front->position.y, player.transform_front->position.z);
@@ -1366,6 +1384,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 obj.capsule.base = obj.transform->position;
                 obj.capsule.base.z  -= obj.capsule.height/2;
 
+                bool call_restore = true;
                 std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                 if (vertical_collision_name != "") {
                     if (std::abs(obj.orig_pos.z - obj.transform->position.z) > 1.0f) {
@@ -1386,6 +1405,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
                         switchout_mesh(obj);
                         pseudo_remove_bbox(obj);
+                        call_restore = false;
                         if(obj.has_sound) {
                             Sound::play(*(*(obj.samples[0])), 1.0f, 0.0f);
                         }
@@ -1402,8 +1422,10 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     }
                 }
 
-                // update bbox with new_pos - orig_pos
-                restore_removed_bbox(obj);
+                if (call_restore) {
+                    // update bbox with new_pos - orig_pos
+                    restore_removed_bbox(obj);
+                }
 
 
             } else if (obj.collision_type == CollisionType::Steal) {

@@ -1344,6 +1344,19 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             t_offset = glm::normalize(t_offset);
             player.held_obj->transform->position = abs_transform_front_pos + (t_offset * 0.2f);
             player.held_obj->transform->position += glm::vec3(0.f, 0.f, 0.6f);
+
+            // put object in current_object
+            if (current_rooms.size() == 0) {
+                printf("ERROR: current_rooms size is 0\n");
+            } else if (current_rooms.size() == 1) {
+                // on stairs area
+                switch_rooms(current_rooms[0]);
+                current_objects->push_back(*player.held_obj);
+            } else {
+                switch_rooms(current_rooms[1]);
+                current_objects->push_back(*player.held_obj);   
+            }
+            
             restore_removed_bbox(*player.held_obj);
             player.held_obj = nullptr;
             player.holding = false;
@@ -1400,6 +1413,9 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.prev_position = collision_obj.transform->position;
                 collision_obj.transform->position = glm::vec3(-10000);
                 pseudo_remove_bbox(collision_obj);
+                // remove obj from scene it is in
+                // current_objects->erase(collision_obj_iter);
+
                 break;
             }
             case CollisionType::Destroy: {

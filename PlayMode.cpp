@@ -522,8 +522,8 @@ void PlayMode::generate_living_room_objects(Scene &scene, std::vector<RoomObject
         }
 
         if (drawable.transform->name == "Key") {
-            objects.back().capsule.radius = 0.25f;
-            objects.back().capsule.height = 0.5f;
+            objects.back().capsule.radius = 0.1f;
+            objects.back().capsule.height = 0.6f;
         }
         
         if (drawable.transform->name == "Pillow") {
@@ -579,6 +579,9 @@ void PlayMode::generate_kitchen_objects(Scene &scene, std::vector<RoomObject> &o
 
             objects.push_back( RoomObject(drawable.transform, type) );
 
+            if (drawable.transform->name == "Spoon.001") {
+                objects.back().capsule.height = 0.6f;
+            }
             if (drawable.transform->name == "Floor.001") {
                 floor_height = objects.back().capsule.tip.z;
                 kitchen_floor = drawable.transform;
@@ -672,7 +675,15 @@ void PlayMode::generate_bedroom_objects(Scene &scene, std::vector<RoomObject> &o
 
         if (drawable.transform->name == "Sock") {
             objects.back().capsule.radius = 0.1f;
-            objects.back().capsule.height = 0.2f;
+            objects.back().capsule.height = 0.5f;
+        }
+        if (drawable.transform->name == "Slipper") {
+            objects.back().capsule.radius = 0.1f;
+            objects.back().capsule.height = 0.5f;
+        }
+        if (drawable.transform->name == "Slipper.001") {
+            objects.back().capsule.radius = 0.1f;
+            objects.back().capsule.height = 0.5f;
         }
         if (drawable.transform->name == "Closet") {
             objects.back().has_sound = true;
@@ -713,10 +724,10 @@ void PlayMode::generate_bathroom_objects(Scene &scene, std::vector<RoomObject> &
 
         objects.push_back( RoomObject(drawable.transform, type) );
         
-        // if (drawable.transform->name == "Toothbrush") {
-        //     objects.back().capsule.radius = 0.1f;
-        //     objects.back().capsule.height = 0.2f;
-        // }
+        if (drawable.transform->name == "Toothbrush") {
+            objects.back().capsule.radius = 0.1f;
+            objects.back().capsule.height = 0.5f;
+        }
         if (drawable.transform->name == "Bathroom Sink Faucet") {
             objects.back().has_sound = true;
             objects.back().samples.push_back(&click);

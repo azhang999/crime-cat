@@ -414,6 +414,11 @@ void PlayMode::GenerateBBox(Scene &scene, Load<MeshBuffer> &meshes) {
             player.transform_front = drawable.transform;
         } else if (drawable.transform->name == "Paw") {
             player.paw = drawable.transform;
+        } else if (drawable.transform->name == "Mouth") {
+            player.mouth = drawable.transform;
+        } else if (drawable.transform->name.find("Mouth") != std::string::npos) { // has word mouth in it
+            // scale them to 0 (hide them)
+            drawable.transform->scale = glm::vec3(0.f);
         }
 	}
 }
@@ -890,6 +895,7 @@ PlayMode::PlayMode() :
     RemoveFrameByName(cat_scene, "Player");
     RemoveFrameByName(cat_scene, "PlayerFront");
     RemoveFrameByName(cat_scene, "Paw");
+    RemoveFrameByName(cat_scene, "Mouth");
 
     player_walking.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
     player_up_jump.frame_times = {0.1f, 0.1f, 0.1f, 0.1f, 1000000.f}; // don't want to cycle
@@ -900,6 +906,19 @@ PlayMode::PlayMode() :
     GetFrames(cat_scene, player_up_jump, "UpJump");
     GetFrames(cat_scene, player_down_jump, "DownJump");
     GetFrames(cat_scene, player_swat, "Swat");
+
+    // remove held items from scene
+    bool done = false;
+    while (!done) {
+        auto frame_iter = find_if(cat_scene.drawables.begin(), cat_scene.drawables.end(),
+                                [](const Scene::Drawable & elem) { return elem.transform->name.find("Mouth") != std::string::npos; });
+        if (frame_iter == cat_scene.drawables.end()) {
+            done = true;
+        } else {
+            player_held_items.push_back(*frame_iter);
+            cat_scene.drawables.erase(frame_iter);
+        }
+    }
 
     // start cat with Walk0 fame
     AddFrame(cat_scene, player_walking.frames[0]);
@@ -1106,7 +1125,7 @@ Scene::Transform *PlayMode::collide() {
             player_tip.z += 1.0f;
             player_base.z -= 1.0f;
             if (capsule_bbox_collision(player_tip, player_base, player.radius, obj.transform->bbox, &surface, &penetration_normal, &penetration_depth)) {
-                printf("collided with: %s\n", obj.name.c_str());
+                // printf("collided with: %s\n", obj.name.c_str());
                 num_collide_objs++;
                 collide_obj = obj.transform;
                 if (num_collide_objs == 1 || is_almost_up_vec(penetration_normal)) {
@@ -1619,6 +1638,48 @@ void PlayMode::update(float elapsed) {
     } else { // down jump
         player_down_jump.animate(cat_scene, true, elapsed);
     }
+
+    // if object is being held
+    if (player.holding) {
+        // find frame being animated
+        auto cat_itr = cat_scene.drawables.begin();
+        if (cat_itr == cat_scene.drawables.end()) {
+            printf("Error no cat animation frame exists!\n");
+        } else {
+            printf("player is holding: %s\n", player.held_obj->transform->name.c_str());
+            // parse out every including and past . in the name
+            size_t period_pos = 0;
+            //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
+            std::string parsed_name = player.held_obj->transform->name;
+            if ((period_pos = player.held_obj->transform->name.find(".")) != std::string::npos) {
+                parsed_name = player.held_obj->transform->name.substr(0, period_pos);;
+            }
+
+            if (cat_itr->transform->name.find("Swat") == std::string::npos) { // is not a swat
+                player.mouth->position = mouth_pos[cat_itr->transform->name];
+                for (auto &item : player_held_items) {
+                    printf("loop: %s\n", item.transform->name.c_str());
+                    
+                    // some frames have the object but some do not...
+
+                    if (item.transform->name == parsed_name + " Mouth") {
+                        printf("display: %s\n", item.transform->name.c_str());
+                        item.transform->scale = glm::vec3(1.f);
+                        // check to see if item is in cat_scene
+                        // add if it isn't
+                        if (!SearchFrameByName(cat_scene, item.transform->name)) {
+                            AddFrame(cat_scene, item);
+                        }
+                    } else {
+                        item.transform->scale = glm::vec3(0.f);
+                    }
+                }
+            }
+        }
+    }
+    // get name of animation frame if frame isn't swat
+    // set position of Mouth to the value for that frame
+    // make held item => scale 1.0, other scale 0.f
     
     { // camera position
         glm::vec3 camera_center = player.transform_middle->position;

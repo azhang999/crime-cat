@@ -1400,9 +1400,23 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
-                        obj.transform->position = orig_pos;
-                        // obj.pen_dir.z = std::abs(obj.pen_dir.z);
-                        // obj.transform->position += ((obj.pen_depth + 0.00001f) * obj.pen_dir);
+                        if (vertical_collision_name == "Cat Bed") {
+                            // TODO: add meow sound
+                            score += 10;
+                            collide_label = "+10 New Toy";
+                            collide_msg_time = 3.0f;
+                            display_collide = true;
+                            obj.transform->position = glm::vec3(1000.f);
+                        } else if (vertical_collision_name == "Toilet.002") {
+                            // TODO: add splash sound
+                            score += 10;
+                            collide_label = "+12 Splash";
+                            collide_msg_time = 3.0f;
+                            display_collide = true;
+                            obj.transform->position = glm::vec3(1000.f);
+                        } else {
+                            obj.transform->position = orig_pos;
+                        }
                     }
 
                     restore_removed_bbox(obj);

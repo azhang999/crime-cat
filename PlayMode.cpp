@@ -1309,8 +1309,8 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
                         switchout_mesh(obj);
                         pseudo_remove_bbox(obj);
-                        if(collision_obj.has_sound) {
-                            Sound::play(*(*(collision_obj.samples[0])), 1.0f, 0.0f);
+                        if(obj.has_sound) {
+                            Sound::play(*(*(obj.samples[0])), 1.0f, 0.0f);
                         }
                     } else {
                         // hasn't fallen that much - undo grav

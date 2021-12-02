@@ -1,4 +1,4 @@
-# (TODO: your game's title)
+# Crime Cat
 
 Author: Emma Liu (emmaliu), Aria Zhang (arzhang), Anna Li (ayli1), Nolan Mass (nmass)
 

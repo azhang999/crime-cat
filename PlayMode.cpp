@@ -1082,17 +1082,11 @@ PlayMode::PlayMode() :
     switch_rooms(RoomType::LivingRoom);
 
     // Get shadow transform 
-
-    for (auto drawable : shadow_scene.drawables) {
-        std::cout << drawable.transform->name << std::endl;
-    }
     auto shadow_iter = find_if(shadow_scene.drawables.begin(), shadow_scene.drawables.end(),
                                         [](const Scene::Drawable &elem) { return elem.transform->name == "Shadow"; });
     if (shadow_iter != shadow_scene.drawables.end()) {
         shadow.drawable = &(*shadow_iter);
         shadow.drawable->transform->position = living_room_floor->position;
-    } else {
-        std::cout << "************** OI MATE WHERE'S THE SHADOW **************" << std::endl;
     }
 
     // ------------- Setup text rendering ---------------

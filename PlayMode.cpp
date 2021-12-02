@@ -1506,6 +1506,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         for (auto &obj : *current_objects) {
             if (isnan(obj.transform->position.x) || isnan(obj.transform->position.y) || isnan(obj.transform->position.z)) {
                 printf("ERROR: OBJECT IS NAN: %s %f %f %f\n", obj.transform->name.c_str(), obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                continue;
                 // exit(1);
             }
 
@@ -1934,12 +1935,11 @@ void PlayMode::partial_update(float elapsed) {
 // ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
 
 void PlayMode::update(float elapsed) {
-    std::cout << elapsed << std::endl;
     if (game_over) return;
 
-    printf("elapsed: %f\n", elapsed);
-    if (elapsed == 0.f || elapsed > 0.5f) {
-        printf("ERROR elapsed time is %f\n", elapsed);
+    // printf("elapsed: %f\n", elapsed);
+    if (elapsed == 0.f || elapsed >= 0.03f) {
+        printf("LAG time is %f\n", elapsed);
         // exit(1);
     }
 

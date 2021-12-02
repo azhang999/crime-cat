@@ -1609,7 +1609,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                             obj.transform->position = glm::vec3(1000.f);
                         } else if (vertical_collision_name == "Toilet.002") {
                             Sound::play(*(*(&splash)), 1.0f, 0.0f);
-                            score += 10;
+                            score += 12;
                             collide_label = "+12 Splash";
                             collide_msg_time = 3.0f;
                             display_collide = true;
@@ -1941,7 +1941,7 @@ void PlayMode::update(float elapsed) {
 
     // printf("elapsed: %f\n", elapsed);
     if (elapsed == 0.f || elapsed >= 0.03f) {
-        printf("LAG time is %f\n", elapsed);
+        // printf("LAG time is %f\n", elapsed);
         // exit(1);
     }
 

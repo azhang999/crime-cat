@@ -1,8 +1,8 @@
 # (TODO: your game's title)
 
-Author: (TODO: your name)
+Author: Emma Liu (emmaliu), Aria Zhang (arzhang), Anna Li (ayli1), Nolan Mass (nmass)
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: You are a mischievous orange cat with a lust for crime. Your owner is away from home for a bit, giving you a window of opportunity to wreak as much havoc in the house as possible.
 
 Screen Shot:
 
@@ -10,9 +10,12 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+Walk using the WASD keys.
+Click to swat/pick up/drop items.
+Click/ESC to make the camera (un)follow the mouse.
+Move the mouse to rotate the camera.
 
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Sources:
 
 We used music from the following sources:
 - ["Blippy Trance"](https://freepd.com/misc.php)
@@ -31,12 +34,14 @@ We used music from the following sources:
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
 
-We obtained the following free fonts from FontSquirrel
+We obtained the following free fonts from FontSquirrel:
 - [Belligerent Madness](https://www.fontsquirrel.com/fonts/belligerent-madness)
 - [Nunito](https://www.fontsquirrel.com/fonts/nunito?q%5Bterm%5D=nunito&q%5Bsearch_check%5D=Y)
 
 We referenced the following code to render images as 2D textures:
 - https://github.com/kjannakh/15-466-f20-base4/blob/master/PlayMode.cpp
+
+All 3D assets and title screen drawing created by Anna Li.
 
 This game was built with [NEST](NEST.md).
 

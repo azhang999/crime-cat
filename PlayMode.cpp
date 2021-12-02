@@ -1133,6 +1133,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             space.pressed = true;
             return true;
         } else if (evt.key.keysym.sym == SDLK_i) {  // Switches back to InstrucMode until the user escapes
+        	SDL_SetRelativeMouseMode(SDL_FALSE);
             Mode::set_current(instruct_mode);
             return true;
         }

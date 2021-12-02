@@ -138,9 +138,10 @@ InstructMode::~InstructMode() {
 bool InstructMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
     if (evt.type == SDL_KEYDOWN) {
         if (evt.key.keysym.sym == SDLK_i) {
-			Mode::set_current(game_mode);
-			return true;
-		}
+					  SDL_SetRelativeMouseMode(SDL_TRUE);
+						Mode::set_current(game_mode);
+						return true;
+				}
     }
 	return false;
 }

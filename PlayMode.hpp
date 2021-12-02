@@ -149,7 +149,7 @@ struct PlayMode : Mode {
 		bool swatting = false;
 
         bool holding = false;
-        RoomObject *held_obj = nullptr; // just put in WallsDoorsFloorsStairs room
+        std::vector<RoomObject> held_obj; // just put in WallsDoorsFloorsStairs room
 
         float swatting_timer = 0.f;
 		bool on_table = false;

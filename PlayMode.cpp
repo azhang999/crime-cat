@@ -1364,8 +1364,8 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             glm::vec3 t_offset = abs_transform_front_pos - player.transform_middle->position;
             t_offset.z = 0.f;
             t_offset = glm::normalize(t_offset);
-            player.held_obj->transform->position = abs_transform_front_pos + (t_offset * 0.2f);
-            player.held_obj->transform->position += glm::vec3(0.f, 0.f, 0.6f);
+            player.held_obj[0].transform->position = abs_transform_front_pos + (t_offset * 0.2f);
+            player.held_obj[0].transform->position += glm::vec3(0.f, 0.f, 0.6f);
 
             // put object in current_object
             if (current_rooms.size() == 0) {
@@ -1373,14 +1373,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             } else if (current_rooms.size() == 1) {
                 // on stairs area
                 switch_rooms(current_rooms[0]);
-                current_objects->push_back(*player.held_obj);
+                current_objects->push_back(player.held_obj[0]);
             } else {
                 switch_rooms(current_rooms[1]);
-                current_objects->push_back(*player.held_obj);   
+                current_objects->push_back(player.held_obj[0]);   
             }
             
-            restore_removed_bbox(*player.held_obj);
-            player.held_obj = nullptr;
+            restore_removed_bbox(player.held_obj[0]);
+            player.held_obj.clear();
             player.holding = false;
         }
     }
@@ -1425,7 +1425,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 player.swatting = false;
                 player.swatting_timer = 0.f;
 
-                player.held_obj = &collision_obj;
+                player.held_obj.push_back(collision_obj);
                 player.holding = true;
 
                 // Save current scale
@@ -1436,7 +1436,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.transform->position = glm::vec3(-10000);
                 pseudo_remove_bbox(collision_obj);
                 // remove obj from scene it is in
-                // current_objects->erase(collision_obj_iter);
+                current_objects->erase(collision_obj_iter);
 
                 break;
             }
@@ -1500,6 +1500,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         for (auto &obj : *current_objects) {
             if (isnan(obj.transform->position.x) || isnan(obj.transform->position.y) || isnan(obj.transform->position.z)) {
                 printf("ERROR: OBJECT IS NAN: %s %f %f %f\n", obj.transform->name.c_str(), obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                continue;
                 // exit(1);
             }
 
@@ -1579,7 +1580,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
 
             } else if (obj.collision_type == CollisionType::Steal) {
-                if (!player.holding || (player.held_obj->transform->name != obj.transform->name)) {
+                if (!player.holding || (player.held_obj[0].transform->name != obj.transform->name)) {
                     // gravity
                     glm::vec3 orig_pos = obj.transform->position;
 
@@ -1828,9 +1829,9 @@ void PlayMode::partial_update(float elapsed) {
             // parse out every including and past . in the name
             size_t period_pos = 0;
             //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
-            std::string parsed_name = player.held_obj->transform->name;
-            if ((period_pos = player.held_obj->transform->name.find(".")) != std::string::npos) {
-                parsed_name = player.held_obj->transform->name.substr(0, period_pos);;
+            std::string parsed_name = player.held_obj[0].transform->name;
+            if ((period_pos = player.held_obj[0].transform->name.find(".")) != std::string::npos) {
+                parsed_name = player.held_obj[0].transform->name.substr(0, period_pos);;
             }
             // printf("parsed_name is: %s\n", parsed_name.c_str());
 
@@ -1928,20 +1929,16 @@ void PlayMode::partial_update(float elapsed) {
 // ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
 
 void PlayMode::update(float elapsed) {
-    std::cout << elapsed << std::endl;
     if (game_over) return;
 
-    printf("elapsed: %f\n", elapsed);
-    if (elapsed == 0.f || elapsed > 0.5f) {
-        printf("ERROR elapsed time is %f\n", elapsed);
+    // printf("elapsed: %f\n", elapsed);
+    if (elapsed == 0.f || elapsed >= 0.03f) {
+        printf("LAG time is %f\n", elapsed);
         // exit(1);
     }
 
-    float partial_elapsed = std::min({elapsed, 0.02f});
-    while (elapsed > 0.f) {
-        partial_update(partial_elapsed);
-        elapsed -= partial_elapsed;
-    }
+    float partial_elapsed = std::min({elapsed, 0.03f});
+    partial_update(partial_elapsed);
     
 
 	//reset button press counters:

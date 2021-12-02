@@ -2,7 +2,7 @@
 OBJECTIVE
 
 8 2
-You're a mischievious little cat who loves to wreak havoc.
+You're a mischievous little cat who loves to wreak havoc.
 Luckily for you, your owner's out on errands for the day. 
 You have 5 minutes to wreak havoc across the house. What crimes will you commit??
 
@@ -14,12 +14,13 @@ You will accumulate Chaos Coins based on how clever your actions are.
 1 1
 CONTROLS
 
-5 1
+6 1
                             Move Forward/Backward
                             Turn Left/Right
                             Jump
-                            Swat/Drop
-                            Adjust the Camera (Rotation)
+                            Swat/Pick Up Item/Drop Item
+                            Make camera (un)follow mouse
+                            Rotate Camera
 
 1 1
     W   /   S 
@@ -31,10 +32,13 @@ CONTROLS
      SPACE
 
 1 1
-      CLICK
+     CLICK
 
 1 1
- CLICK + MOVE
+CLICK  /  ESC
+
+1 1
+MOUSE MOTION
 
 1 2
 To quit this menu, or to bring it up again during the game, press              ->

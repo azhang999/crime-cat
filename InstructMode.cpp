@@ -236,19 +236,19 @@ void InstructMode::draw(glm::uvec2 const &drawable_size) {
 		height_offset += game_text.fonts[game_text.font_ids[i]].offset;
 	}
 	// std::cout << game_text.font_ids.size() << std::endl;
-	height_offset += 25.0f;
+	height_offset += 20.0f;
 	auto controls_offset = height_offset;
-	for (size_t i = 10; i < 15; i++) {
+	for (size_t i = 10; i < 16; i++) {
 		game_text.render_text_buffer(i, game_text.LEFT_X, game_text.TOP_Y - height_offset, glm::vec3(0.8f, 0.8f, 0.8f), game_text.font_ids[i]);
-		height_offset += game_text.fonts[game_text.font_ids[i]].offset + 25.0f;
+		height_offset += game_text.fonts[game_text.font_ids[i]].offset + 15.0f;
 	}
 
 	height_offset = controls_offset;
-	for (size_t i = 15; i < 20; i++) {
-		game_text.render_text_buffer(i, game_text.LEFT_X, game_text.TOP_Y - height_offset, glm::vec3(0.95f, 0.5f, 0.0f), game_text.font_ids[i]);
-		height_offset += game_text.fonts[game_text.font_ids[i]].offset + 25.0f;
+	for (size_t i = 16; i < 22; i++) {
+		game_text.render_text_buffer(i, game_text.LEFT_X, game_text.TOP_Y - height_offset, glm::vec3(0.7f, 0.1f, 0.05f), game_text.font_ids[i]);
+		height_offset += game_text.fonts[game_text.font_ids[i]].offset + 15.0f;
 	}
 
-	game_text.render_text_buffer(20, game_text.LEFT_X + 140.0f, game_text.TOP_Y - height_offset, glm::vec3(1.0f, 1.0f, 1.0f), game_text.font_ids[20]);
-	game_text.render_text_buffer(21, game_text.LEFT_X + 930.0f, game_text.TOP_Y - height_offset - 5.0f, glm::vec3(0.95f, 0.5f, 0.0f), game_text.font_ids[21]);
+	game_text.render_text_buffer(22, game_text.LEFT_X + 140.0f, game_text.TOP_Y - height_offset, glm::vec3(1.0f, 1.0f, 1.0f), game_text.font_ids[22]);
+	game_text.render_text_buffer(23, game_text.LEFT_X + 930.0f, game_text.TOP_Y - height_offset - 5.0f, glm::vec3(0.7f, 0.1f, 0.05f), game_text.font_ids[23]);
 }

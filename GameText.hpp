@@ -60,7 +60,7 @@ struct GameText {
 	glm::vec2 time_loc = glm::vec2(1000.0f, 800.0f);
 	glm::vec2 collision_loc = glm::vec2(250.0f, 750.0f);
 
-	glm::vec3 score_color = glm::vec3(0.4f, 0.4f, 1.0f);
+	glm::vec3 score_color = glm::vec3(0.2f, 0.2f, 0.7f);
 	glm::vec3 time_color = glm::vec3(0.2f, 0.8f, 0.2f);
 	glm::vec3 collision_color = glm::vec3(1.0f, 0.8f, 0.8f);
 

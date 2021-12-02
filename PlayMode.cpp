@@ -277,9 +277,9 @@ Load< Sound::Sample > books(LoadTagDefault, []() -> Sound::Sample const * {
 Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("trophy.wav"));
 });
-// source: https://freesound.org/people/dmadridp/sounds/233476/
-Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("typing.wav"));
+// source: https://freesound.org/people/Autistic%20Lucario/sounds/142608/
+Load< Sound::Sample > computer_error(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("computer_error.wav"));
 });
 // source: https://freesound.org/people/soundscalpel.com/sounds/110393/
 Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
@@ -288,6 +288,10 @@ Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
 // source: https://freesound.org/people/Mafon2/sounds/436541/
 Load< Sound::Sample > meow(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("meow.wav"));
+});
+// source: https://freesound.org/people/Robinhood76/sounds/51669/
+Load< Sound::Sample > coins(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("coins.wav"));
 });
 
 float get_top_height(Scene::Transform *transform) {
@@ -862,7 +866,7 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
         }
         if (drawable.transform->name == "Laptop Screen") {
             objects.back().has_sound = true;
-            objects.back().samples.push_back(&typing);
+            objects.back().samples.push_back(&computer_error);
         }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
@@ -874,6 +878,10 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
         if (drawable.transform->name == "Books") {
             objects.back().has_sound = true;
             objects.back().samples.push_back(&books);
+        }
+        if (drawable.transform->name == "Armchair Seat") {
+            objects.back().has_sound = true;
+            objects.back().samples.push_back(&coins);
         }
     }
 }

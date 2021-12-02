@@ -281,6 +281,14 @@ Load< Sound::Sample > trophy(LoadTagDefault, []() -> Sound::Sample const * {
 Load< Sound::Sample > typing(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("typing.wav"));
 });
+// source: https://freesound.org/people/soundscalpel.com/sounds/110393/
+Load< Sound::Sample > splash(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("splash.wav"));
+});
+// source: https://freesound.org/people/Mafon2/sounds/436541/
+Load< Sound::Sample > meow(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("meow.wav"));
+});
 
 float get_top_height(Scene::Transform *transform) {
     if (transform->top_stand) {
@@ -852,9 +860,9 @@ void PlayMode::generate_office_objects(Scene &scene, std::vector<RoomObject> &ob
             objects.back().has_sound = true;
             objects.back().samples.push_back(&papers);
         }
-        if (drawable.transform->name == "Laptop") {
+        if (drawable.transform->name == "Laptop Screen") {
             objects.back().has_sound = true;
-            objects.back().samples.push_back(&typing); // can't hear this one?
+            objects.back().samples.push_back(&typing);
         }
         if (drawable.transform->name == "Trophy") {
             objects.back().given_speed = 3.0f;
@@ -1074,17 +1082,11 @@ PlayMode::PlayMode() :
     switch_rooms(RoomType::LivingRoom);
 
     // Get shadow transform 
-
-    for (auto drawable : shadow_scene.drawables) {
-        std::cout << drawable.transform->name << std::endl;
-    }
     auto shadow_iter = find_if(shadow_scene.drawables.begin(), shadow_scene.drawables.end(),
                                         [](const Scene::Drawable &elem) { return elem.transform->name == "Shadow"; });
     if (shadow_iter != shadow_scene.drawables.end()) {
         shadow.drawable = &(*shadow_iter);
         shadow.drawable->transform->position = living_room_floor->position;
-    } else {
-        std::cout << "************** OI MATE WHERE'S THE SHADOW **************" << std::endl;
     }
 
     // ------------- Setup text rendering ---------------
@@ -1362,8 +1364,8 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             glm::vec3 t_offset = abs_transform_front_pos - player.transform_middle->position;
             t_offset.z = 0.f;
             t_offset = glm::normalize(t_offset);
-            player.held_obj->transform->position = abs_transform_front_pos + (t_offset * 0.2f);
-            player.held_obj->transform->position += glm::vec3(0.f, 0.f, 0.6f);
+            player.held_obj[0].transform->position = abs_transform_front_pos + (t_offset * 0.2f);
+            player.held_obj[0].transform->position += glm::vec3(0.f, 0.f, 0.6f);
 
             // put object in current_object
             if (current_rooms.size() == 0) {
@@ -1371,14 +1373,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
             } else if (current_rooms.size() == 1) {
                 // on stairs area
                 switch_rooms(current_rooms[0]);
-                current_objects->push_back(*player.held_obj);
+                current_objects->push_back(player.held_obj[0]);
             } else {
                 switch_rooms(current_rooms[1]);
-                current_objects->push_back(*player.held_obj);   
+                current_objects->push_back(player.held_obj[0]);   
             }
             
-            restore_removed_bbox(*player.held_obj);
-            player.held_obj = nullptr;
+            restore_removed_bbox(player.held_obj[0]);
+            player.held_obj.clear();
             player.holding = false;
         }
     }
@@ -1423,7 +1425,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 player.swatting = false;
                 player.swatting_timer = 0.f;
 
-                player.held_obj = &collision_obj;
+                player.held_obj.push_back(collision_obj);
                 player.holding = true;
 
                 // Save current scale
@@ -1434,7 +1436,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                 collision_obj.transform->position = glm::vec3(-10000);
                 pseudo_remove_bbox(collision_obj);
                 // remove obj from scene it is in
-                // current_objects->erase(collision_obj_iter);
+                current_objects->erase(collision_obj_iter);
 
                 break;
             }
@@ -1498,6 +1500,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
         for (auto &obj : *current_objects) {
             if (isnan(obj.transform->position.x) || isnan(obj.transform->position.y) || isnan(obj.transform->position.z)) {
                 printf("ERROR: OBJECT IS NAN: %s %f %f %f\n", obj.transform->name.c_str(), obj.transform->position.x, obj.transform->position.y, obj.transform->position.z);
+                continue;
                 // exit(1);
             }
 
@@ -1577,7 +1580,7 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
 
 
             } else if (obj.collision_type == CollisionType::Steal) {
-                if (!player.holding || (player.held_obj->transform->name != obj.transform->name)) {
+                if (!player.holding || (player.held_obj[0].transform->name != obj.transform->name)) {
                     // gravity
                     glm::vec3 orig_pos = obj.transform->position;
 
@@ -1590,14 +1593,14 @@ void PlayMode::interact_with_objects(float elapsed, std::string object_collide_n
                     std::string vertical_collision_name = capsule_collide(obj, &obj.pen_dir, &obj.pen_depth);
                     if (vertical_collision_name != "") {
                         if (vertical_collision_name == "Cat Bed") {
-                            // TODO: add meow sound
+                            Sound::play(*(*(&meow)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+10 New Toy";
                             collide_msg_time = 3.0f;
                             display_collide = true;
                             obj.transform->position = glm::vec3(1000.f);
                         } else if (vertical_collision_name == "Toilet.002") {
-                            // TODO: add splash sound
+                            Sound::play(*(*(&splash)), 1.0f, 0.0f);
                             score += 10;
                             collide_label = "+12 Splash";
                             collide_msg_time = 3.0f;
@@ -1826,9 +1829,9 @@ void PlayMode::partial_update(float elapsed) {
             // parse out every including and past . in the name
             size_t period_pos = 0;
             //SOURCE: https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c
-            std::string parsed_name = player.held_obj->transform->name;
-            if ((period_pos = player.held_obj->transform->name.find(".")) != std::string::npos) {
-                parsed_name = player.held_obj->transform->name.substr(0, period_pos);;
+            std::string parsed_name = player.held_obj[0].transform->name;
+            if ((period_pos = player.held_obj[0].transform->name.find(".")) != std::string::npos) {
+                parsed_name = player.held_obj[0].transform->name.substr(0, period_pos);;
             }
             // printf("parsed_name is: %s\n", parsed_name.c_str());
 
@@ -1851,7 +1854,7 @@ void PlayMode::partial_update(float elapsed) {
     // make held item => scale 1.0, other scale 0.f
     
     { // camera position
-        glm::vec3 camera_center = player.transform_middle->position;
+        glm::vec3 camera_center = player.transform_middle->make_local_to_world() * glm::vec4(0.0f, 0.0f, 0.8f, 1.0f);
         glm::vec3 camera_direction = glm::vec3(
             cos(phi + M_PI/2) * sin(theta),
             sin(phi + M_PI/2) * sin(theta),
@@ -1897,9 +1900,7 @@ void PlayMode::partial_update(float elapsed) {
         for (auto room_type : current_rooms) {
             switch_rooms(room_type);
             for (auto &drawable : current_scene->drawables) {
-                 if (drawable.transform->name == "Magazine Collided"
-                ||  drawable.transform->name == "Mug Collided")
-                    continue;
+                 if (drawable.transform->name == "Magazine Collided") continue;
                 radius = std::min(radius, 0.99f * bbox_distance(drawable.transform->bbox));
             }
         }
@@ -1928,20 +1929,16 @@ void PlayMode::partial_update(float elapsed) {
 // ROOM OBJECTS COLLISION AND MOVEMENT END --------------------------
 
 void PlayMode::update(float elapsed) {
-    std::cout << elapsed << std::endl;
     if (game_over) return;
 
-    printf("elapsed: %f\n", elapsed);
-    if (elapsed == 0.f || elapsed > 0.5f) {
-        printf("ERROR elapsed time is %f\n", elapsed);
+    // printf("elapsed: %f\n", elapsed);
+    if (elapsed == 0.f || elapsed >= 0.03f) {
+        printf("LAG time is %f\n", elapsed);
         // exit(1);
     }
 
-    float partial_elapsed = std::min({elapsed, 0.02f});
-    while (elapsed > 0.f) {
-        partial_update(partial_elapsed);
-        elapsed -= partial_elapsed;
-    }
+    float partial_elapsed = std::min({elapsed, 0.03f});
+    partial_update(partial_elapsed);
     
 
 	//reset button press counters:
@@ -1995,27 +1992,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
         // Maybe cat second to last?
         cat_scene.draw(*player.camera);
         // case on what's in current_rooms
-        if (current_rooms.size() == 1) {
-            // on stairs - just render everything
-            for (auto room_type : all_rooms) {
-                switch_rooms(room_type);
-                current_scene->draw(*player.camera);
-            }
-        } else if (current_rooms[1] == Kitchen || current_rooms[1] == Office || current_rooms[1] == LivingRoom) {
-            switch_rooms(WallsDoorsFloorsStairs);
-            current_scene->draw(*player.camera);
-            switch_rooms(Kitchen);
-            current_scene->draw(*player.camera);
-            switch_rooms(Office);
-            current_scene->draw(*player.camera);
-            switch_rooms(LivingRoom);
-            current_scene->draw(*player.camera);
-        } else if (current_rooms[1] == Bedroom || current_rooms[1] == Bathroom) {
-            switch_rooms(WallsDoorsFloorsStairs);
-            current_scene->draw(*player.camera);
-            switch_rooms(Bedroom);
-            current_scene->draw(*player.camera);
-            switch_rooms(Bathroom);
+        for (auto room_type : all_rooms) {
+            switch_rooms(room_type);
             current_scene->draw(*player.camera);
         }
 

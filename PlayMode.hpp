@@ -149,7 +149,7 @@ struct PlayMode : Mode {
 		bool swatting = false;
 
         bool holding = false;
-        RoomObject *held_obj = nullptr; // just put in WallsDoorsFloorsStairs room
+        std::vector<RoomObject> held_obj; // just put in WallsDoorsFloorsStairs room
 
         float swatting_timer = 0.f;
 		bool on_table = false;
@@ -179,7 +179,7 @@ struct PlayMode : Mode {
 
 		void update_position(glm::vec3 new_pos, float height, float dist) {
 			drawable->transform->position = new_pos;
-			drawable->transform->position.z = height + 0.08f;
+			drawable->transform->position.z = height + 0.1f;
 			closest_dist = dist;
 		}
 	} shadow;

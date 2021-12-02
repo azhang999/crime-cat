@@ -217,5 +217,5 @@ void SplashMode::draw(glm::uvec2 const &drawable_size) {
     }
 
     // Draw text
-    game_text.draw_text(game_text.CENTER_X - 350, game_text.CENTER_Y + 200, glm::vec3(0.25f, 0.25f, 0.25f));
+    game_text.draw_text(game_text.CENTER_X - 350, game_text.CENTER_Y + 170, glm::vec3(0.25f, 0.25f, 0.25f));
 }
